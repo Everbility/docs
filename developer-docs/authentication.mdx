@@ -1,0 +1,52 @@
+---
+title: "Authentication"
+description: "Authenticate external requests with Everbility API keys."
+---
+
+## Use the API key directly
+
+Send the API key in the `Authorization` header:
+
+```http
+Authorization: Bearer <api_key>
+```
+
+Everbility verifies the API key with Clerk on every request. You do not exchange the key for a JWT first.
+
+## Key types
+
+### User API keys
+
+User keys act as the signed-in user.
+
+- Personal clients only
+- Personal templates only
+- Best for individual practitioner workflows
+
+### Organisation API keys
+
+Organisation keys act as the active organisation.
+
+- Organisation clients only
+- Organisation templates only
+- Best for team-wide integrations and PMS sync flows
+
+## Recommended first call
+
+Call `GET /me` after you provision a key.
+
+It tells you:
+
+- whether the key is a `user` or `organization` key
+- the effective scope
+- the verified `api_key_id`
+
+## Common auth failures
+
+Requests are rejected when:
+
+- the key is invalid or revoked
+- the key scope does not match the client or template you requested
+- the organisation has not enabled API key access
+
+If you do not see API key management in the Everbility UI, ask an organisation admin to enable API keys for your organisation.

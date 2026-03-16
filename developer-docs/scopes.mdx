@@ -1,0 +1,41 @@
+---
+title: "Scopes and access"
+description: "Understand how user and organisation API keys scope client, template, and document access."
+---
+
+## Scope model
+
+The External API does not mix personal and organisation data.
+
+| Key type | Can access | Cannot access |
+| --- | --- | --- |
+| User API key | Personal clients, personal reports, personal templates | Organisation clients and organisation templates |
+| Organisation API key | Organisation clients, organisation reports, organisation templates | Personal clients and personal templates |
+
+## Client search follows the key scope
+
+`GET /clients/search` only returns clients visible to the key you used.
+
+This means:
+
+- a user key searches that user’s personal clients
+- an organisation key searches the organisation’s shared clients
+
+## Notes, uploads, and generated reports stay in scope
+
+When you create notes, upload files, or generate reports:
+
+- user-key writes stay in the user’s personal scope
+- organisation-key writes stay in the organisation scope
+
+Organisation-created notes and generated reports are read-only in the current Everbility UI.
+
+## Cross-scope access
+
+Cross-scope access is rejected.
+
+Examples:
+
+- a user key cannot fetch an organisation client’s reports
+- an organisation key cannot fetch a personal template
+- note IDs used for report generation must belong to the same client and the same visible scope as the API key

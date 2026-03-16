@@ -1,0 +1,34 @@
+---
+title: "API overview"
+description: "Reference overview for the Everbility External API."
+---
+
+## Base URL
+
+```text
+https://api.everbility.com/v1/external
+```
+
+## Authentication
+
+All endpoints use bearer authentication with an Everbility API key:
+
+```http
+Authorization: Bearer <api_key>
+```
+
+## Response patterns
+
+- Synchronous endpoints return JSON.
+- PDF and large-audio uploads return a `job_id` and complete asynchronously.
+- Report generation returns a streamed sequence of JSON lines.
+
+## Machine-readable schema
+
+You can also fetch the raw OpenAPI schema from:
+
+```text
+https://api.everbility.com/v1/external/openapi.json
+```
+
+Use the navigation on this tab to explore each endpoint in detail.

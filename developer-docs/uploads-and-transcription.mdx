@@ -1,0 +1,69 @@
+---
+title: "Uploads and transcription"
+description: "Create notes with Markdown, PDFs, and large audio uploads."
+---
+
+## Create a Markdown note
+
+Use `POST /clients/{client_id}/notes` when you already have text content.
+
+```bash
+curl -s \
+  -X POST \
+  -H "Authorization: Bearer <api_key>" \
+  -H "Content-Type: application/json" \
+  -d '{"title":"Case summary","markdown":"Session summary in Markdown"}' \
+  "https://api.everbility.com/v1/external/clients/864/notes"
+```
+
+Response:
+
+```json
+{
+  "note_id": "67d5..."
+}
+```
+
+## Upload a PDF
+
+Use `POST /clients/{client_id}/notes/upload` for PDF files.
+
+The endpoint returns a `job_id` immediately. Poll `GET /jobs/{job_id}` until the job completes.
+
+## Upload a large audio file
+
+Use `POST /clients/{client_id}/transcriptions/upload-large` for large audio files.
+
+This reuses Everbility’s existing asynchronous transcription workflow.
+
+The endpoint returns a `job_id` immediately. Poll `GET /jobs/{job_id}` until the job completes.
+
+## Poll job status
+
+Jobs return:
+
+- `status`: `in_progress`, `completed`, or `failed`
+- `progress`: current progress value
+- `result`: completion payload when available
+
+For completed PDF and audio jobs, `result.note_id` contains the created note ID.
+
+Example:
+
+```json
+{
+  "job_id": "8a77...",
+  "task_type": "transcript",
+  "status": "completed",
+  "progress": 100,
+  "result": {
+    "note_id": "67d5..."
+  }
+}
+```
+
+## What happens after upload
+
+- PDF uploads create notes inside Everbility after processing finishes.
+- Large audio uploads create transcribed notes inside Everbility after processing finishes.
+- Those note IDs can then be used in report generation requests.

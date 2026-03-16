@@ -1,0 +1,94 @@
+---
+title: "Quickstart"
+description: "Make your first request against the Everbility External API."
+---
+
+## 1. Get an API key
+
+Everbility API keys are enabled per organisation.
+
+- Organisation admins can create organisation API keys from **User profile > Organisation**.
+- When API keys are enabled for the organisation, members can create personal user API keys from **User profile > API keys**.
+
+Use an organisation key for organisation-scoped clients and templates. Use a user key for personal-scoped clients and templates.
+
+## 2. Check your key
+
+Use the API key directly as a bearer token. There is no JWT exchange step.
+
+```bash
+curl -s \
+  -H "Authorization: Bearer <api_key>" \
+  https://api.everbility.com/v1/external/me
+```
+
+Example response:
+
+```json
+{
+  "principal_type": "organization",
+  "principal_id": "org_123",
+  "effective_user_id": "org_123",
+  "org_id": "org_123",
+  "api_key_id": "apk_123",
+  "created_by_user_id": "user_123"
+}
+```
+
+## 3. Search for a client
+
+```bash
+curl -s \
+  -H "Authorization: Bearer <api_key>" \
+  "https://api.everbility.com/v1/external/clients/search?q=alex"
+```
+
+This returns clients that are visible to the key you used.
+
+## 4. List reports for a client
+
+```bash
+curl -s \
+  -H "Authorization: Bearer <api_key>" \
+  "https://api.everbility.com/v1/external/clients/864/documents"
+```
+
+Each document in v1 is a report.
+
+## 5. Fetch a rendered report
+
+```bash
+curl -s \
+  -H "Authorization: Bearer <api_key>" \
+  "https://api.everbility.com/v1/external/clients/864/documents/<report_id>?format=markdown"
+```
+
+Use `format=markdown` or `format=html`.
+
+## 6. Push context back into Everbility
+
+Create a Markdown note:
+
+```bash
+curl -s \
+  -X POST \
+  -H "Authorization: Bearer <api_key>" \
+  -H "Content-Type: application/json" \
+  -d '{"title":"Case summary","markdown":"Patient tolerated session well."}' \
+  "https://api.everbility.com/v1/external/clients/864/notes"
+```
+
+Upload a PDF or large audio file when you need Everbility to process the file asynchronously.
+
+## 7. Generate a report
+
+```bash
+curl --no-buffer \
+  -X POST \
+  -H "Authorization: Bearer <api_key>" \
+  -H "Content-Type: application/json" \
+  -d '{"template_id":"<template_id>","note_ids":["<note_id>"]}' \
+  "https://api.everbility.com/v1/external/clients/864/reports/generate"
+```
+
+The response is a streamed sequence of JSON lines. The final `report_saved` event includes the generated `report_id`.

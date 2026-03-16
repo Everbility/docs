@@ -1,0 +1,1100 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Everbility External API",
+    "version": "1.0.0",
+    "description": "Pull reports from Everbility, upload notes and files, poll asynchronous jobs, and generate reports from saved templates."
+  },
+  "paths": {
+    "/v1/external/me": {
+      "get": {
+        "tags": [
+          "external"
+        ],
+        "summary": "Check key identity",
+        "operationId": "get_external_me_v1_external_me_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExternalMeResponse"
+                }
+              }
+            }
+          }
+        },
+        "description": "Verify the API key, confirm whether it is a user or organisation key, and inspect the effective scope.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/v1/external/clients/search": {
+      "get": {
+        "tags": [
+          "external"
+        ],
+        "summary": "Search clients",
+        "operationId": "search_clients_v1_external_clients_search_get",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Q"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1,
+              "title": "Page"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 20,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExternalClientSearchResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Search clients that are visible to the current API key scope.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/v1/external/clients/{client_id}/documents": {
+      "get": {
+        "tags": [
+          "external"
+        ],
+        "summary": "List client reports",
+        "operationId": "list_client_documents_v1_external_clients__client_id__documents_get",
+        "parameters": [
+          {
+            "name": "client_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Client Id"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1,
+              "title": "Page"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 20,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ExternalDocumentPreview"
+                  },
+                  "title": "Response List Client Documents V1 External Clients  Client Id  Documents Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "description": "List reports for a client that is visible to the current API key scope.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/v1/external/clients/{client_id}/documents/{document_id}": {
+      "get": {
+        "tags": [
+          "external"
+        ],
+        "summary": "Get a rendered report",
+        "operationId": "get_client_document_v1_external_clients__client_id__documents__document_id__get",
+        "parameters": [
+          {
+            "name": "client_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Client Id"
+            }
+          },
+          {
+            "name": "document_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Document Id"
+            }
+          },
+          {
+            "name": "format",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "markdown",
+                "html"
+              ],
+              "type": "string",
+              "default": "markdown",
+              "title": "Format"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExternalDocumentDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Fetch a single report and render it as Markdown or HTML on demand.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/v1/external/clients/{client_id}/notes": {
+      "post": {
+        "tags": [
+          "external"
+        ],
+        "summary": "Create a Markdown note",
+        "operationId": "create_markdown_note_v1_external_clients__client_id__notes_post",
+        "parameters": [
+          {
+            "name": "client_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Client Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExternalMarkdownNoteCreateInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExternalNoteCreateResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Create a client note from Markdown content and return the created note ID.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/v1/external/clients/{client_id}/notes/upload": {
+      "post": {
+        "tags": [
+          "external"
+        ],
+        "summary": "Upload a PDF note",
+        "operationId": "upload_pdf_note_v1_external_clients__client_id__notes_upload_post",
+        "parameters": [
+          {
+            "name": "client_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Client Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_upload_pdf_note_v1_external_clients__client_id__notes_upload_post"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Upload a PDF for asynchronous processing into a client note. Poll the returned job ID until completion.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/v1/external/clients/{client_id}/transcriptions/upload-large": {
+      "post": {
+        "tags": [
+          "external"
+        ],
+        "summary": "Upload large audio for transcription",
+        "operationId": "upload_large_audio_for_transcription_v1_external_clients__client_id__transcriptions_upload_large_post",
+        "parameters": [
+          {
+            "name": "client_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Client Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_upload_large_audio_for_transcription_v1_external_clients__client_id__transcriptions_upload_large_post"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Upload a large audio file for asynchronous transcription into a client note. Poll the returned job ID until completion.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/v1/external/jobs/{job_id}": {
+      "get": {
+        "tags": [
+          "external"
+        ],
+        "summary": "Get async job status",
+        "operationId": "get_job_status_v1_external_jobs__job_id__get",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Job Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExternalJobResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Check the status of a PDF-processing or large-audio transcription job.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/v1/external/templates": {
+      "get": {
+        "tags": [
+          "external"
+        ],
+        "summary": "List templates",
+        "operationId": "list_templates_v1_external_templates_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ExternalTemplatePreview"
+                  },
+                  "type": "array",
+                  "title": "Response List Templates V1 External Templates Get"
+                }
+              }
+            }
+          }
+        },
+        "description": "List report-generation templates visible to the current API key scope.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/v1/external/templates/{template_id}": {
+      "get": {
+        "tags": [
+          "external"
+        ],
+        "summary": "Get a template",
+        "operationId": "get_template_v1_external_templates__template_id__get",
+        "parameters": [
+          {
+            "name": "template_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Template Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExternalTemplateDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Fetch a single report-generation template that is visible to the current API key scope.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/v1/external/clients/{client_id}/reports/generate": {
+      "post": {
+        "tags": [
+          "external"
+        ],
+        "summary": "Generate a report",
+        "operationId": "generate_report_v1_external_clients__client_id__reports_generate_post",
+        "parameters": [
+          {
+            "name": "client_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Client Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExternalGenerateReportInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Start backend report generation from a template ID and note IDs. The response is a streamed sequence of JSON events.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Body_upload_large_audio_for_transcription_v1_external_clients__client_id__transcriptions_upload_large_post": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "format": "binary",
+            "title": "File"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file"
+        ],
+        "title": "Body_upload_large_audio_for_transcription_v1_external_clients__client_id__transcriptions_upload_large_post"
+      },
+      "Body_upload_pdf_note_v1_external_clients__client_id__notes_upload_post": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "format": "binary",
+            "title": "File"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file"
+        ],
+        "title": "Body_upload_pdf_note_v1_external_clients__client_id__notes_upload_post"
+      },
+      "ExternalClientSearchResponse": {
+        "properties": {
+          "results": {
+            "items": {
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Results"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "page": {
+            "type": "integer",
+            "title": "Page"
+          },
+          "limit": {
+            "type": "integer",
+            "title": "Limit"
+          }
+        },
+        "type": "object",
+        "required": [
+          "results",
+          "total",
+          "page",
+          "limit"
+        ],
+        "title": "ExternalClientSearchResponse"
+      },
+      "ExternalDocumentDetail": {
+        "properties": {
+          "_id": {
+            "type": "string",
+            "title": " Id"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "report"
+            ],
+            "const": "report",
+            "title": "Type",
+            "default": "report"
+          },
+          "client_id": {
+            "type": "integer",
+            "title": "Client Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          },
+          "format": {
+            "type": "string",
+            "enum": [
+              "markdown",
+              "html"
+            ],
+            "title": "Format"
+          },
+          "content": {
+            "type": "string",
+            "title": "Content"
+          }
+        },
+        "type": "object",
+        "required": [
+          "_id",
+          "client_id",
+          "title",
+          "created_at",
+          "updated_at",
+          "format",
+          "content"
+        ],
+        "title": "ExternalDocumentDetail"
+      },
+      "ExternalDocumentPreview": {
+        "properties": {
+          "_id": {
+            "type": "string",
+            "title": " Id"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "report"
+            ],
+            "const": "report",
+            "title": "Type",
+            "default": "report"
+          },
+          "client_id": {
+            "type": "integer",
+            "title": "Client Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "_id",
+          "client_id",
+          "title",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "ExternalDocumentPreview"
+      },
+      "ExternalGenerateReportInput": {
+        "properties": {
+          "template_id": {
+            "type": "string",
+            "title": "Template Id"
+          },
+          "note_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Note Ids"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          }
+        },
+        "type": "object",
+        "required": [
+          "template_id",
+          "note_ids"
+        ],
+        "title": "ExternalGenerateReportInput"
+      },
+      "ExternalJobResponse": {
+        "properties": {
+          "job_id": {
+            "type": "string",
+            "title": "Job Id"
+          },
+          "task_type": {
+            "type": "string",
+            "title": "Task Type"
+          },
+          "start_timestamp": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start Timestamp"
+          },
+          "end_timestamp": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End Timestamp"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "progress": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              }
+            ],
+            "title": "Progress"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "result": {
+            "anyOf": [
+              {
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Result"
+          }
+        },
+        "type": "object",
+        "required": [
+          "job_id",
+          "task_type",
+          "status",
+          "progress"
+        ],
+        "title": "ExternalJobResponse"
+      },
+      "ExternalMarkdownNoteCreateInput": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "markdown": {
+            "type": "string",
+            "title": "Markdown"
+          }
+        },
+        "type": "object",
+        "required": [
+          "title",
+          "markdown"
+        ],
+        "title": "ExternalMarkdownNoteCreateInput"
+      },
+      "ExternalMeResponse": {
+        "properties": {
+          "principal_type": {
+            "type": "string",
+            "enum": [
+              "user",
+              "organization"
+            ],
+            "title": "Principal Type"
+          },
+          "principal_id": {
+            "type": "string",
+            "title": "Principal Id"
+          },
+          "effective_user_id": {
+            "type": "string",
+            "title": "Effective User Id"
+          },
+          "org_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Org Id"
+          },
+          "api_key_id": {
+            "type": "string",
+            "title": "Api Key Id"
+          },
+          "created_by_user_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created By User Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "principal_type",
+          "principal_id",
+          "effective_user_id",
+          "api_key_id"
+        ],
+        "title": "ExternalMeResponse"
+      },
+      "ExternalNoteCreateResponse": {
+        "properties": {
+          "note_id": {
+            "type": "string",
+            "title": "Note Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "note_id"
+        ],
+        "title": "ExternalNoteCreateResponse"
+      },
+      "ExternalTemplateDetail": {
+        "properties": {
+          "_id": {
+            "type": "string",
+            "title": " Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "is_org_template": {
+            "type": "boolean",
+            "title": "Is Org Template",
+            "default": false
+          },
+          "content": {
+            "type": "object",
+            "title": "Content"
+          }
+        },
+        "type": "object",
+        "required": [
+          "_id",
+          "title",
+          "created_at",
+          "content"
+        ],
+        "title": "ExternalTemplateDetail"
+      },
+      "ExternalTemplatePreview": {
+        "properties": {
+          "_id": {
+            "type": "string",
+            "title": " Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "is_org_template": {
+            "type": "boolean",
+            "title": "Is Org Template",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "_id",
+          "title",
+          "created_at"
+        ],
+        "title": "ExternalTemplatePreview"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    },
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "API Key",
+        "description": "Use a Clerk-backed Everbility user or organisation API key directly as the bearer token."
+      }
+    }
+  },
+  "servers": [
+    {
+      "url": "https://api.everbility.com",
+      "description": "Production"
+    }
+  ],
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ]
+}

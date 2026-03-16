@@ -1,0 +1,58 @@
+---
+title: "Report generation"
+description: "Generate reports from Everbility templates and note IDs."
+---
+
+## How generation works
+
+Generation is a backend-run flow.
+
+1. List templates with `GET /templates`.
+2. Fetch the template you want with `GET /templates/{template_id}`.
+3. Collect the `note_id` values you want to use.
+4. Call `POST /clients/{client_id}/reports/generate`.
+5. Read the streamed JSON response until `report_saved`.
+6. Fetch the saved report from `/clients/{client_id}/documents/{report_id}`.
+
+## Request body
+
+```json
+{
+  "template_id": "<template_id>",
+  "note_ids": ["<note_id_1>", "<note_id_2>"],
+  "title": "Optional custom report title"
+}
+```
+
+All `note_ids` must belong to the same client and be visible to the API key you used.
+
+## Stream format
+
+The response is a chunked `application/json` stream, not a background-job polling flow.
+
+You will receive newline-delimited JSON events such as:
+
+- `started`
+- `progress`
+- `report_saved`
+- `error`
+
+Example:
+
+```json
+{"type":"started","total_nodes":3}
+{"type":"progress","completed_nodes":1,"total_nodes":3}
+{"type":"report_saved","report_id":"67d6...","client_id":864,"title":"Functional capacity report"}
+```
+
+## Fetch the generated report
+
+After `report_saved`, fetch the report by ID:
+
+```bash
+curl -s \
+  -H "Authorization: Bearer <api_key>" \
+  "https://api.everbility.com/v1/external/clients/864/documents/<report_id>?format=markdown"
+```
+
+Use `format=markdown` or `format=html`.
