@@ -1,12 +1,12 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "Everbility External API",
+    "title": "Everbility Public API",
     "version": "1.0.0",
     "description": "Pull reports from Everbility, upload notes and files, poll asynchronous jobs, and generate reports from saved templates."
   },
   "paths": {
-    "/v1/external/me": {
+    "/v1/public/me": {
       "get": {
         "tags": [
           "external"
@@ -33,7 +33,7 @@
         ]
       }
     },
-    "/v1/external/clients/search": {
+    "/v1/public/clients/search": {
       "get": {
         "tags": [
           "external"
@@ -105,7 +105,7 @@
         ]
       }
     },
-    "/v1/external/clients/{client_id}/documents": {
+    "/v1/public/clients/{client_id}/documents": {
       "get": {
         "tags": [
           "external"
@@ -180,7 +180,7 @@
         ]
       }
     },
-    "/v1/external/clients/{client_id}/documents/{document_id}": {
+    "/v1/public/clients/{client_id}/documents/{document_id}": {
       "get": {
         "tags": [
           "external"
@@ -251,7 +251,7 @@
         ]
       }
     },
-    "/v1/external/clients/{client_id}/notes": {
+    "/v1/public/clients/{client_id}/notes": {
       "post": {
         "tags": [
           "external"
@@ -309,7 +309,7 @@
         ]
       }
     },
-    "/v1/external/clients/{client_id}/notes/upload": {
+    "/v1/public/clients/{client_id}/notes/upload": {
       "post": {
         "tags": [
           "external"
@@ -365,7 +365,7 @@
         ]
       }
     },
-    "/v1/external/clients/{client_id}/transcriptions/upload-large": {
+    "/v1/public/clients/{client_id}/transcriptions/upload-large": {
       "post": {
         "tags": [
           "external"
@@ -421,7 +421,7 @@
         ]
       }
     },
-    "/v1/external/jobs/{job_id}": {
+    "/v1/public/jobs/{job_id}": {
       "get": {
         "tags": [
           "external"
@@ -469,7 +469,7 @@
         ]
       }
     },
-    "/v1/external/templates": {
+    "/v1/public/templates": {
       "get": {
         "tags": [
           "external"
@@ -500,7 +500,7 @@
         ]
       }
     },
-    "/v1/external/templates/{template_id}": {
+    "/v1/public/templates/{template_id}": {
       "get": {
         "tags": [
           "external"
@@ -548,7 +548,7 @@
         ]
       }
     },
-    "/v1/external/clients/{client_id}/reports/generate": {
+    "/v1/public/clients/{client_id}/reports/generate": {
       "post": {
         "tags": [
           "external"
