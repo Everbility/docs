@@ -9,8 +9,8 @@
   },
   "favicon": "favicon.ico",
   "logo": {
-    "light": "/developer-docs/logo/light.svg",
-    "dark": "/developer-docs/logo/dark.svg"
+    "light": "https://everbility.mintlify.app/logo/light.svg",
+    "dark": "https://everbility.mintlify.app/logo/dark.svg"
   },
   "navigation": {
     "tabs": [
