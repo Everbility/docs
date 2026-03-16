@@ -1,0 +1,57 @@
+---
+title: "Everbility developer docs"
+description: "Build pull, ingest, transcription, and report-generation workflows against the Everbility External API."
+---
+
+# Everbility External API
+
+Build pull integrations for Everbility clients, documents, notes, audio transcription, and report generation.
+
+The External API is designed for customer systems such as internal PMS platforms that need to pull data from Everbility and push context back in.
+
+## What you can build
+
+- Search clients within the scope of the API key.
+- Pull rendered reports in Markdown or HTML.
+- Upload Markdown notes, PDFs, and large audio files.
+- Poll asynchronous upload and transcription jobs.
+- Generate reports from Everbility templates and note IDs.
+
+## Base URL
+
+```text
+https://api.everbility.com/v1/external
+```
+
+## Start here
+
+<CardGroup cols={2}>
+  <Card title="Quickstart" href="/developer-docs/quickstart">
+    Make your first authenticated request and fetch a report.
+  </Card>
+  <Card title="Authentication" href="/developer-docs/authentication">
+    Use Everbility API keys directly as bearer tokens.
+  </Card>
+  <Card title="Uploads and transcription" href="/developer-docs/uploads-and-transcription">
+    Push notes, PDFs, and large audio files into Everbility.
+  </Card>
+  <Card title="Report generation" href="/developer-docs/report-generation">
+    Generate reports from template IDs and note IDs.
+  </Card>
+</CardGroup>
+
+## How access works
+
+Everbility supports two API key types:
+
+| Key type | Scope | Typical use |
+| --- | --- | --- |
+| User API key | Personal clients and personal templates | Individual practitioner workflows |
+| Organisation API key | Organisation clients and organisation templates | Team or PMS integrations |
+
+Use an organisation key when your integration needs to work across shared organisation data.
+
+## Need help?
+
+- Email [support@everbility.com](mailto:support@everbility.com)
+- Book a demo at [calendly.com/d/cp8d-fy7-mnp/everbility-demo](https://calendly.com/d/cp8d-fy7-mnp/everbility-demo)
