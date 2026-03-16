@@ -51,32 +51,32 @@
           {
             "group": "Core endpoints",
             "pages": [
-              "GET /v1/external/me",
-              "GET /v1/external/clients/search",
-              "GET /v1/external/clients/{client_id}/documents",
-              "GET /v1/external/clients/{client_id}/documents/{document_id}"
+              "GET /v1/public/me",
+              "GET /v1/public/clients/search",
+              "GET /v1/public/clients/{client_id}/documents",
+              "GET /v1/public/clients/{client_id}/documents/{document_id}"
             ]
           },
           {
             "group": "Templates",
             "pages": [
-              "GET /v1/external/templates",
-              "GET /v1/external/templates/{template_id}"
+              "GET /v1/public/templates",
+              "GET /v1/public/templates/{template_id}"
             ]
           },
           {
             "group": "Ingestion",
             "pages": [
-              "POST /v1/external/clients/{client_id}/notes",
-              "POST /v1/external/clients/{client_id}/notes/upload",
-              "POST /v1/external/clients/{client_id}/transcriptions/upload-large",
-              "GET /v1/external/jobs/{job_id}"
+              "POST /v1/public/clients/{client_id}/notes",
+              "POST /v1/public/clients/{client_id}/notes/upload",
+              "POST /v1/public/clients/{client_id}/transcriptions/upload-large",
+              "GET /v1/public/jobs/{job_id}"
             ]
           },
           {
             "group": "Report generation",
             "pages": [
-              "POST /v1/external/clients/{client_id}/reports/generate"
+              "POST /v1/public/clients/{client_id}/reports/generate"
             ]
           }
         ]

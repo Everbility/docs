@@ -1,6 +1,6 @@
 ---
 title: "Quickstart"
-description: "Make your first request against the Everbility External API."
+description: "Make your first request against the Everbility Public API."
 ---
 
 ## 1. Get an API key
@@ -19,7 +19,7 @@ Use the API key directly as a bearer token. There is no JWT exchange step.
 ```bash
 curl -s \
   -H "Authorization: Bearer <api_key>" \
-  https://api.everbility.com/v1/external/me
+  https://api.everbility.com/v1/public/me
 ```
 
 Example response:
@@ -36,7 +36,7 @@ Example response:
 ```bash
 curl -s \
   -H "Authorization: Bearer <api_key>" \
-  "https://api.everbility.com/v1/external/clients/search?q=alex"
+  "https://api.everbility.com/v1/public/clients/search?q=alex"
 ```
 
 This returns clients that are visible to the key you used.
@@ -46,7 +46,7 @@ This returns clients that are visible to the key you used.
 ```bash
 curl -s \
   -H "Authorization: Bearer <api_key>" \
-  "https://api.everbility.com/v1/external/clients/864/documents"
+  "https://api.everbility.com/v1/public/clients/864/documents"
 ```
 
 Each document in v1 is a report.
@@ -56,7 +56,7 @@ Each document in v1 is a report.
 ```bash
 curl -s \
   -H "Authorization: Bearer <api_key>" \
-  "https://api.everbility.com/v1/external/clients/864/documents/<report_id>?format=markdown"
+  "https://api.everbility.com/v1/public/clients/864/documents/<report_id>?format=markdown"
 ```
 
 Use `format=markdown` or `format=html`.
@@ -71,7 +71,7 @@ curl -s \
   -H "Authorization: Bearer <api_key>" \
   -H "Content-Type: application/json" \
   -d '{"title":"Case summary","markdown":"Patient tolerated session well."}' \
-  "https://api.everbility.com/v1/external/clients/864/notes"
+  "https://api.everbility.com/v1/public/clients/864/notes"
 ```
 
 Upload a PDF or large audio file when you need Everbility to process the file asynchronously.
@@ -84,7 +84,7 @@ curl --no-buffer \
   -H "Authorization: Bearer <api_key>" \
   -H "Content-Type: application/json" \
   -d '{"template_id":"<template_id>","note_ids":["<note_id>"]}' \
-  "https://api.everbility.com/v1/external/clients/864/reports/generate"
+  "https://api.everbility.com/v1/public/clients/864/reports/generate"
 ```
 
 The response is a streamed sequence of JSON lines. The final `report_saved` event includes the generated `report_id`.
