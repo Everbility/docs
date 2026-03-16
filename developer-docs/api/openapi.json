@@ -551,10 +551,10 @@
     "/v1/public/clients/{client_id}/reports/generate": {
       "post": {
         "tags": [
-          "external"
+          "public"
         ],
-        "summary": "Generate a report",
-        "operationId": "generate_report_v1_external_clients__client_id__reports_generate_post",
+        "summary": "Generate Report",
+        "operationId": "generate_report_v1_public_clients__client_id__reports_generate_post",
         "parameters": [
           {
             "name": "client_id",
@@ -581,7 +581,9 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/ExternalJobQueuedResponse"
+                }
               }
             }
           },
@@ -596,7 +598,7 @@
             }
           }
         },
-        "description": "Start backend report generation from a template ID and note IDs. The response is a streamed sequence of JSON events.",
+        "description": "Start backend report generation from a template ID and note IDs. The response returns a job_id immediately; poll GET /v1/public/jobs/{job_id} until the job completes.",
         "security": [
           {
             "bearerAuth": []
@@ -1049,6 +1051,19 @@
           "type"
         ],
         "title": "ValidationError"
+      },
+      "ExternalJobQueuedResponse": {
+        "properties": {
+          "job_id": {
+            "type": "string",
+            "title": "Job Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "job_id"
+        ],
+        "title": "ExternalJobQueuedResponse"
       }
     },
     "securitySchemes": {

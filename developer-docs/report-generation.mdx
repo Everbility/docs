@@ -10,8 +10,8 @@ Generation is a backend-run flow.
 1. List templates with `GET /templates`.
 2. Fetch the template you want with `GET /templates/{template_id}`.
 3. Collect the `note_id` values you want to use.
-4. Call `POST /clients/{client_id}/reports/generate`.
-5. Read the streamed JSON response until `report_saved`.
+4. Call `POST /clients/{client_id}/reports/generate` and store the returned `job_id`.
+5. Poll `GET /jobs/{job_id}` until the job completes.
 6. Fetch the saved report from `/clients/{client_id}/documents/{report_id}`.
 
 ## Request body
@@ -26,28 +26,43 @@ Generation is a backend-run flow.
 
 All `note_ids` must belong to the same client and be visible to the API key you used.
 
-## Stream format
+## Job lifecycle
 
-The response is a chunked `application/json` stream, not a background-job polling flow.
-
-You will receive newline-delimited JSON events such as:
-
-- `started`
-- `progress`
-- `report_saved`
-- `error`
-
-Example:
+The generation endpoint returns JSON immediately:
 
 ```json
-{"type":"started","total_nodes":3}
-{"type":"progress","completed_nodes":1,"total_nodes":3}
-{"type":"report_saved","report_id":"67d6...","client_id":864,"title":"Functional capacity report"}
+{
+  "job_id": "7f3f5a92-0e5d-4c54-bc7b-1d3f5d2c5a4f"
+}
+```
+
+Poll `GET /jobs/{job_id}` until the job reaches a terminal state.
+
+Possible statuses are:
+
+- `queued`
+- `in_progress`
+- `completed`
+- `failed`
+
+Completed jobs include the generated report metadata:
+
+```json
+{
+  "job_id": "7f3f5a92-0e5d-4c54-bc7b-1d3f5d2c5a4f",
+  "type": "report_generation",
+  "status": "completed",
+  "result": {
+    "report_id": "67d6...",
+    "client_id": 864,
+    "title": "Functional capacity report"
+  }
+}
 ```
 
 ## Fetch the generated report
 
-After `report_saved`, fetch the report by ID:
+After the job is `completed`, fetch the report by ID:
 
 ```bash
 curl -s \
