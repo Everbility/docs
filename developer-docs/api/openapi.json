@@ -910,29 +910,6 @@
             ],
             "title": "Principal Type"
           },
-          "principal_id": {
-            "type": "string",
-            "title": "Principal Id"
-          },
-          "effective_user_id": {
-            "type": "string",
-            "title": "Effective User Id"
-          },
-          "org_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Org Id"
-          },
-          "api_key_id": {
-            "type": "string",
-            "title": "Api Key Id"
-          },
           "created_by_user_id": {
             "anyOf": [
               {
@@ -947,10 +924,7 @@
         },
         "type": "object",
         "required": [
-          "principal_type",
-          "principal_id",
-          "effective_user_id",
-          "api_key_id"
+          "principal_type"
         ],
         "title": "ExternalMeResponse"
       },
