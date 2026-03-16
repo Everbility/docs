@@ -22,8 +22,8 @@ Ask an organisation admin to enable API keys for your organisation. They can ema
 ## Response patterns
 
 - Synchronous endpoints return JSON.
-- PDF and large-audio uploads return a `job_id` and complete asynchronously.
-- Report generation returns a streamed sequence of JSON lines.
+- PDF uploads, large-audio uploads, and report generation return a `job_id` and complete asynchronously.
+- Poll `GET /jobs/{job_id}` until the job reaches `completed` or `failed`.
 
 ## Machine-readable schema
 

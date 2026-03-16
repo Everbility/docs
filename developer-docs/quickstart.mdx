@@ -80,8 +80,10 @@ Upload a PDF or large audio file when you need Everbility to process the file as
 
 ## 7. Generate a report
 
+Start the job:
+
 ```bash
-curl --no-buffer \
+curl -s \
   -X POST \
   -H "Authorization: Bearer <api_key>" \
   -H "Content-Type: application/json" \
@@ -89,4 +91,18 @@ curl --no-buffer \
   "https://api.everbility.com/v1/public/clients/864/reports/generate"
 ```
 
-The response is a streamed sequence of JSON lines. The final `report_saved` event includes the generated `report_id`.
+Then poll the returned `job_id` until it completes:
+
+```bash
+curl -s \
+  -H "Authorization: Bearer <api_key>" \
+  "https://api.everbility.com/v1/public/jobs/<job_id>"
+```
+
+When the job is `completed`, read `result.report_id` and fetch the saved report from:
+
+```bash
+curl -s \
+  -H "Authorization: Bearer <api_key>" \
+  "https://api.everbility.com/v1/public/clients/864/documents/<report_id>?format=markdown"
+```
