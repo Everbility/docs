@@ -99,6 +99,10 @@ curl -s \
   "https://api.everbility.com/v1/public/jobs/<job_id>"
 ```
 
+Templates without prompt nodes still complete successfully and save the
+template content directly. Templates with prompt nodes generate those sections
+from the supplied notes before the report is saved.
+
 When the job is `completed`, read `result.report_id` and fetch the saved report from:
 
 ```bash

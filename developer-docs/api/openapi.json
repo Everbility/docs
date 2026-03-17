@@ -602,7 +602,7 @@
             }
           }
         },
-        "description": "Start backend report generation from a template ID and note IDs. The response returns a job_id immediately; poll GET /v1/public/jobs/{job_id} until the job completes.",
+        "description": "Start backend report creation from a template ID and note IDs. If the template contains prompt nodes, the backend generates those sections from the supplied notes. If the template contains no prompt nodes, the backend saves the template content directly as a report. The response returns a job_id immediately; poll GET /v1/public/jobs/{job_id} until the job completes.",
         "security": [
           {
             "bearerAuth": []
