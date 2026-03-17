@@ -7,6 +7,12 @@ description: "Generate reports from Everbility templates and note IDs."
 
 Generation is a backend-run flow.
 
+Templates can contain prompt nodes, static content, or a mix of both. If the
+selected template contains prompt nodes, Everbility generates those sections
+from the supplied note content. If the template contains no prompt nodes, the
+job still completes and saves the template content directly as a report without
+invoking generation.
+
 1. List templates with `GET /templates`.
 2. Fetch the template you want with `GET /templates/{template_id}`.
 3. Collect the `note_id` values you want to use.
@@ -45,7 +51,7 @@ Possible statuses are:
 - `completed`
 - `failed`
 
-Completed jobs include the generated report metadata:
+Completed jobs include the saved report metadata:
 
 ```json
 {
@@ -59,6 +65,9 @@ Completed jobs include the generated report metadata:
   }
 }
 ```
+
+When the template contains prompt nodes, `result` may also include fields such
+as `total_nodes` and `completed_nodes`.
 
 ## Fetch the generated report
 
