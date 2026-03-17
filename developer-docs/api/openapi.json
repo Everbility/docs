@@ -342,7 +342,9 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/ExternalJobQueuedResponse"
+                }
               }
             }
           },
@@ -398,7 +400,9 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/ExternalJobQueuedResponse"
+                }
               }
             }
           },
@@ -461,7 +465,7 @@
             }
           }
         },
-        "description": "Check the status of a PDF-processing or large-audio transcription job.",
+        "description": "Check the status of a public async job, including PDF-processing, large-audio transcription, and report-generation jobs.",
         "security": [
           {
             "bearerAuth": []
@@ -641,7 +645,7 @@
         "properties": {
           "results": {
             "items": {
-              "type": "object"
+              "$ref": "#/components/schemas/ExternalClientSearchResult"
             },
             "type": "array",
             "title": "Results"
@@ -667,6 +671,41 @@
           "limit"
         ],
         "title": "ExternalClientSearchResponse"
+      },
+      "ExternalClientSearchResult": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "first_name": {
+            "type": "string",
+            "title": "First Name"
+          },
+          "last_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Name"
+          },
+          "is_org_client": {
+            "type": "boolean",
+            "title": "Is Org Client"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "first_name",
+          "last_name",
+          "is_org_client"
+        ],
+        "title": "ExternalClientSearchResult"
       },
       "ExternalDocumentDetail": {
         "properties": {
