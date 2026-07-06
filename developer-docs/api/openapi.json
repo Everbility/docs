@@ -3,7 +3,7 @@
   "info": {
     "title": "Everbility Public API",
     "version": "1.0.0",
-    "description": "Pull reports from Everbility, upload notes and files, poll asynchronous jobs, and generate reports from saved templates."
+    "description": "Pull reports from Everbility, upload notes and files, poll asynchronous jobs, and generate reports from saved templates. Partner endpoints let approved platforms connect practices with OAuth 2.0, launch report-writing sessions, and retrieve completed documents."
   },
   "paths": {
     "/v1/public/me": {
@@ -609,6 +609,400 @@
           }
         ]
       }
+    },
+    "/v1/partner/oauth/token": {
+      "post": {
+        "tags": [
+          "partner"
+        ],
+        "summary": "Exchange Partner Token",
+        "operationId": "exchange_partner_token_v1_partner_oauth_token_post",
+        "description": "Exchange an authorization code (with its PKCE code_verifier) or a refresh token for a new access and refresh token pair. Accepts form-encoded or JSON bodies. Refresh tokens are single use: each refresh returns a new pair and revokes the previous access token. Reusing a consumed refresh token revokes the whole connection and requires re-authorization by a practice admin.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/PartnerTokenRequest"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PartnerTokenRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "New token pair. The access token lasts 1 hour, the refresh token 90 days.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PartnerTokenResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid code, verifier, redirect_uri, or grant_type.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PartnerErrorResponse"
+                },
+                "example": {
+                  "detail": "Invalid authorization code"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid client credentials, or invalid, reused, or expired refresh token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PartnerErrorResponse"
+                },
+                "example": {
+                  "detail": "Refresh token reuse detected"
+                }
+              }
+            }
+          }
+        },
+        "security": []
+      }
+    },
+    "/v1/partner/oauth/revoke": {
+      "post": {
+        "tags": [
+          "partner"
+        ],
+        "summary": "Revoke Partner Connection",
+        "operationId": "revoke_partner_token_v1_partner_oauth_revoke_post",
+        "description": "Revoke an entire partner connection by presenting any of its tokens (access or refresh) with your client credentials. All tokens for the connection are revoked and unfinished launch sessions expire. Always returns revoked: true, including for unknown or already-revoked tokens. Accepts form-encoded or JSON bodies.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/PartnerRevokeRequest"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PartnerRevokeRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Revocation acknowledged.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PartnerRevokeResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid client credentials.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PartnerErrorResponse"
+                },
+                "example": {
+                  "detail": "Invalid OAuth client"
+                }
+              }
+            }
+          }
+        },
+        "security": []
+      }
+    },
+    "/v1/partner/launch-sessions": {
+      "post": {
+        "tags": [
+          "partner"
+        ],
+        "summary": "Create Launch Session",
+        "operationId": "create_partner_launch_session_v1_partner_launch_sessions_post",
+        "description": "Create a report-writing launch session for a clinician in the connected practice. Requires an Idempotency-Key header: retrying with the same key and identical body returns the original session; reusing a key with a different body fails with 409. Sessions expire 48 hours after creation if not completed. Open the returned launch_url for the clinician.",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Idempotency-Key"
+            },
+            "description": "Unique key per logical session (for example a UUID). Enables safe retries."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PartnerLaunchSessionCreateInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Session created (or the existing session for a repeated Idempotency-Key).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PartnerLaunchSessionCreateResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Missing Idempotency-Key, or clinician_email did not match exactly one verified practice member.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PartnerErrorResponse"
+                },
+                "example": {
+                  "detail": "clinician_email_not_resolved"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or expired access token, or the connection was revoked.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PartnerErrorResponse"
+                },
+                "example": {
+                  "detail": "Invalid bearer token"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The mapped Everbility client is not accessible to the assigned clinician.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PartnerErrorResponse"
+                },
+                "example": {
+                  "detail": "client_access_denied"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Idempotency-Key was reused with a different request body.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PartnerErrorResponse"
+                },
+                "example": {
+                  "detail": "Idempotency-Key conflict"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "partnerBearer": []
+          }
+        ]
+      }
+    },
+    "/v1/partner/launch-sessions/{session_id}": {
+      "get": {
+        "tags": [
+          "partner"
+        ],
+        "summary": "Get Launch Session Status",
+        "operationId": "get_partner_launch_session_status_v1_partner_launch_sessions__session_id__get",
+        "description": "Poll a launch session. Status moves created -> opened -> completed; sessions that pass their 48-hour expiry become expired. document_url is populated once the session is completed.",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Current session status and timestamps.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PartnerLaunchSessionStatusResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or expired access token, or the connection was revoked.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PartnerErrorResponse"
+                },
+                "example": {
+                  "detail": "Invalid bearer token"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown session_id, or the session belongs to a different connection.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PartnerErrorResponse"
+                },
+                "example": {
+                  "detail": "Session not found"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "partnerBearer": []
+          }
+        ]
+      }
+    },
+    "/v1/partner/launch-sessions/{session_id}/document": {
+      "get": {
+        "tags": [
+          "partner"
+        ],
+        "summary": "Get Completed Session Document",
+        "operationId": "get_partner_launch_session_document_v1_partner_launch_sessions__session_id__document_get",
+        "description": "Retrieve the rendered report attached to a completed launch session, as Markdown (default) or HTML. The document remains available on the completed session after the 48-hour session window.",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          },
+          {
+            "name": "format",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "markdown",
+                "html"
+              ],
+              "default": "markdown",
+              "title": "Format"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Rendered document.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PartnerDocumentDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or expired access token, or the connection was revoked.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PartnerErrorResponse"
+                },
+                "example": {
+                  "detail": "Invalid bearer token"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown session, or the attached document is no longer accessible.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PartnerErrorResponse"
+                },
+                "example": {
+                  "detail": "Document not found"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The session has not been completed yet.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PartnerErrorResponse"
+                },
+                "example": {
+                  "detail": "Session not completed"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "The session expired before completion.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PartnerErrorResponse"
+                },
+                "example": {
+                  "detail": "Session expired"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "partnerBearer": []
+          }
+        ]
+      }
     }
   },
   "components": {
@@ -1103,6 +1497,380 @@
           "job_id"
         ],
         "title": "ExternalJobQueuedResponse"
+      },
+      "PartnerErrorResponse": {
+        "type": "object",
+        "title": "PartnerErrorResponse",
+        "properties": {
+          "detail": {
+            "type": "string",
+            "title": "Detail",
+            "description": "Human-readable error code or message."
+          }
+        },
+        "required": [
+          "detail"
+        ],
+        "example": {
+          "detail": "Invalid authorization code"
+        }
+      },
+      "PartnerTokenRequest": {
+        "type": "object",
+        "title": "PartnerTokenRequest",
+        "description": "Token request. Send as application/x-www-form-urlencoded or application/json. Fields beyond grant_type, client_id, and client_secret depend on the grant type.",
+        "properties": {
+          "grant_type": {
+            "type": "string",
+            "enum": [
+              "authorization_code",
+              "refresh_token"
+            ],
+            "title": "Grant Type"
+          },
+          "client_id": {
+            "type": "string",
+            "title": "Client Id",
+            "description": "Your partner app's OAuth client ID."
+          },
+          "client_secret": {
+            "type": "string",
+            "title": "Client Secret",
+            "description": "Your partner app's OAuth client secret. Server-side only."
+          },
+          "code": {
+            "type": "string",
+            "title": "Code",
+            "description": "Authorization code from the consent callback. Required for grant_type=authorization_code. Single use, expires after 5 minutes."
+          },
+          "redirect_uri": {
+            "type": "string",
+            "title": "Redirect Uri",
+            "description": "Must exactly match the registered redirect URI. Required for grant_type=authorization_code."
+          },
+          "code_verifier": {
+            "type": "string",
+            "title": "Code Verifier",
+            "pattern": "^[A-Za-z0-9\\-._~]{43,128}$",
+            "description": "PKCE code verifier whose S256 challenge was sent to the consent page. Required for grant_type=authorization_code."
+          },
+          "refresh_token": {
+            "type": "string",
+            "title": "Refresh Token",
+            "description": "Current refresh token. Required for grant_type=refresh_token. Single use — a new pair is returned."
+          }
+        },
+        "required": [
+          "grant_type",
+          "client_id",
+          "client_secret"
+        ]
+      },
+      "PartnerTokenResponse": {
+        "type": "object",
+        "title": "PartnerTokenResponse",
+        "properties": {
+          "access_token": {
+            "type": "string",
+            "title": "Access Token",
+            "description": "Opaque bearer token for partner endpoints. Valid for 1 hour."
+          },
+          "refresh_token": {
+            "type": "string",
+            "title": "Refresh Token",
+            "description": "Single-use refresh token. Valid for 90 days."
+          },
+          "token_type": {
+            "type": "string",
+            "enum": [
+              "Bearer"
+            ],
+            "title": "Token Type",
+            "default": "Bearer"
+          },
+          "expires_in": {
+            "type": "integer",
+            "title": "Expires In",
+            "description": "Access token lifetime in seconds (3600)."
+          }
+        },
+        "required": [
+          "access_token",
+          "refresh_token",
+          "token_type",
+          "expires_in"
+        ],
+        "example": {
+          "access_token": "pat_Zl9nB1qFhOQe2kQ4rW8xJ3Ty",
+          "refresh_token": "prt_M4kQ9wY2eXvB7cJ1sL6pR8Ud",
+          "token_type": "Bearer",
+          "expires_in": 3600
+        }
+      },
+      "PartnerRevokeRequest": {
+        "type": "object",
+        "title": "PartnerRevokeRequest",
+        "properties": {
+          "client_id": {
+            "type": "string",
+            "title": "Client Id"
+          },
+          "client_secret": {
+            "type": "string",
+            "title": "Client Secret"
+          },
+          "token": {
+            "type": "string",
+            "title": "Token",
+            "description": "Any access or refresh token from the connection to revoke."
+          }
+        },
+        "required": [
+          "client_id",
+          "client_secret",
+          "token"
+        ]
+      },
+      "PartnerRevokeResponse": {
+        "type": "object",
+        "title": "PartnerRevokeResponse",
+        "properties": {
+          "revoked": {
+            "type": "boolean",
+            "title": "Revoked"
+          }
+        },
+        "required": [
+          "revoked"
+        ],
+        "example": {
+          "revoked": true
+        }
+      },
+      "PartnerLaunchSessionCreateInput": {
+        "type": "object",
+        "title": "PartnerLaunchSessionCreateInput",
+        "properties": {
+          "external_client_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255,
+            "title": "External Client Id",
+            "description": "Your platform's ID for the client. Used to remember the client mapping across sessions on this connection."
+          },
+          "clinician_email": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 320,
+            "title": "Clinician Email",
+            "description": "Must match the verified email of exactly one member of the connected practice. Matching is case-insensitive."
+          },
+          "client_first_name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 255
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Client First Name",
+            "description": "Shown to the clinician when mapping the client for the first time."
+          },
+          "client_last_name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 255
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Client Last Name",
+            "description": "Shown to the clinician when mapping the client for the first time."
+          }
+        },
+        "required": [
+          "external_client_id",
+          "clinician_email"
+        ],
+        "example": {
+          "external_client_id": "your-client-42",
+          "clinician_email": "jordan@examplepractice.com",
+          "client_first_name": "Alex",
+          "client_last_name": "Nguyen"
+        }
+      },
+      "PartnerLaunchSessionCreateResponse": {
+        "type": "object",
+        "title": "PartnerLaunchSessionCreateResponse",
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "title": "Session Id"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "created",
+              "opened",
+              "completed",
+              "expired"
+            ],
+            "title": "Status"
+          },
+          "launch_url": {
+            "type": "string",
+            "title": "Launch Url",
+            "description": "Open this URL for the assigned clinician to write the report in Everbility."
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Expires At",
+            "description": "Sessions expire 48 hours after creation if not completed."
+          }
+        },
+        "required": [
+          "session_id",
+          "status",
+          "launch_url",
+          "expires_at"
+        ],
+        "example": {
+          "session_id": "psess_Zl9nB1qFhOQe2kQ4rW8xJ3Ty",
+          "status": "created",
+          "launch_url": "https://www.everbility.com/partner-sessions/psess_Zl9nB1qFhOQe2kQ4rW8xJ3Ty",
+          "expires_at": "2026-07-08T04:15:00Z"
+        }
+      },
+      "PartnerLaunchSessionStatusResponse": {
+        "type": "object",
+        "title": "PartnerLaunchSessionStatusResponse",
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "title": "Session Id"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "created",
+              "opened",
+              "completed",
+              "expired"
+            ],
+            "title": "Status"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "opened_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Opened At"
+          },
+          "completed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Expires At"
+          },
+          "document_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Document Url",
+            "description": "Populated once the session is completed."
+          }
+        },
+        "required": [
+          "session_id",
+          "status",
+          "created_at",
+          "expires_at"
+        ],
+        "example": {
+          "session_id": "psess_Zl9nB1qFhOQe2kQ4rW8xJ3Ty",
+          "status": "completed",
+          "created_at": "2026-07-06T04:15:00Z",
+          "opened_at": "2026-07-06T04:22:41Z",
+          "completed_at": "2026-07-06T05:03:12Z",
+          "expires_at": "2026-07-08T04:15:00Z",
+          "document_url": "/v1/partner/launch-sessions/psess_Zl9nB1qFhOQe2kQ4rW8xJ3Ty/document"
+        }
+      },
+      "PartnerDocumentDetail": {
+        "type": "object",
+        "title": "PartnerDocumentDetail",
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "title": "Session Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "everbility_client_id": {
+            "type": "integer",
+            "title": "Everbility Client Id"
+          },
+          "format": {
+            "type": "string",
+            "enum": [
+              "markdown",
+              "html"
+            ],
+            "title": "Format"
+          },
+          "content": {
+            "type": "string",
+            "title": "Content",
+            "description": "Rendered report content in the requested format."
+          }
+        },
+        "required": [
+          "session_id",
+          "title",
+          "everbility_client_id",
+          "format",
+          "content"
+        ],
+        "example": {
+          "session_id": "psess_Zl9nB1qFhOQe2kQ4rW8xJ3Ty",
+          "title": "Functional capacity report",
+          "everbility_client_id": 864,
+          "format": "markdown",
+          "content": "# Functional capacity report\n\n..."
+        }
       }
     },
     "securitySchemes": {
@@ -1111,6 +1879,12 @@
         "scheme": "bearer",
         "bearerFormat": "API Key",
         "description": "Use a Clerk-backed Everbility user or organisation API key directly as the bearer token."
+      },
+      "partnerBearer": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "Partner access token",
+        "description": "Opaque partner access token (pat_...) issued by POST /v1/partner/oauth/token. Access tokens last 1 hour; refresh with the 90-day refresh token."
       }
     }
   },

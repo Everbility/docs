@@ -1,0 +1,99 @@
+---
+title: "Partner integration overview"
+description: "Launch Everbility report writing from your platform and pull the finished document back with OAuth 2.0."
+icon: "handshake"
+---
+
+The Partner API lets practice management systems and other platforms embed Everbility's report writing into their own workflow. Your platform starts a **launch session** for a client, the clinician writes the report in Everbility under their own login, and your platform retrieves the finished document.
+
+Unlike the [Public API](/developer-docs/index), which uses per-user API keys, the Partner API is built for third-party platforms: a practice admin connects your app once with OAuth 2.0, and your server acts on behalf of that whole practice.
+
+<Info>
+Partner apps are provisioned manually. Email [support@everbility.com](mailto:support@everbility.com) to register as a partner and receive your `client_id` and `client_secret`.
+</Info>
+
+## How it works
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant P as Your server
+    participant B as Browser
+    participant E as Everbility
+
+    Note over P,E: Connect — once per practice
+    P->>B: Redirect practice admin to consent page (with PKCE challenge)
+    B->>E: Admin reviews and approves the connection
+    E->>B: Redirect to your callback with authorization code
+    B->>P: code + state
+    P->>E: POST /v1/partner/oauth/token (code + verifier + secret)
+    E-->>P: access token (1 h) + refresh token (90 d)
+
+    Note over P,E: Launch — once per document
+    P->>E: POST /v1/partner/launch-sessions (clinician + client details)
+    E-->>P: session_id + launch_url
+    P->>B: Clinician opens launch_url
+    B->>E: Clinician signs in and writes the report in Everbility
+
+    Note over P,E: Retrieve
+    P->>E: GET /v1/partner/launch-sessions/{session_id}
+    E-->>P: status: completed + document_url
+    P->>E: GET /v1/partner/launch-sessions/{session_id}/document
+    E-->>P: document title + content (Markdown or HTML)
+```
+
+## The three building blocks
+
+<CardGroup cols={3}>
+  <Card title="Connection" icon="plug" href="/developer-docs/partner/connect">
+    A practice admin approves your app once. You exchange the authorization code for tokens and refresh them on a 90-day rolling window.
+  </Card>
+  <Card title="Launch session" icon="rocket" href="/developer-docs/partner/launch-sessions">
+    A single report-writing hand-off. You create it with a clinician email and your client ID, then send the clinician to the `launch_url`.
+  </Card>
+  <Card title="Document retrieval" icon="file-lines" href="/developer-docs/partner/launch-sessions#retrieve-the-completed-document">
+    Poll the session until it completes, then pull the rendered report as Markdown or HTML into your platform.
+  </Card>
+</CardGroup>
+
+## Base URL
+
+```text
+https://api.everbility.com/v1/partner
+```
+
+All partner endpoints, including the OAuth token endpoint, live under this prefix. See the [API reference](/developer-docs/api/overview) for full request and response schemas.
+
+## Client mapping
+
+Your platform and Everbility each have their own client records. The first time a clinician opens a session for one of your clients, Everbility asks them to link it to an Everbility client (or they create one). The mapping is remembered per connection, so every later session for that `external_client_id` skips straight to writing.
+
+## Lifetimes at a glance
+
+| Credential / object | Lifetime | Notes |
+| --- | --- | --- |
+| Authorization code | 5 minutes | Single use. A new approval invalidates any outstanding codes. |
+| Access token | 1 hour | Opaque bearer token for all partner endpoints. |
+| Refresh token | 90 days | Single use — each refresh returns a new pair (rotation). |
+| Launch session | 48 hours | Expires if the clinician does not complete the report in time. |
+
+## Security model
+
+- **PKCE is mandatory.** Every authorization uses `code_challenge_method=S256`, in addition to your `client_secret`.
+- **Tokens are opaque and hashed at rest.** Everbility stores only SHA-256 hashes of codes, tokens, and your client secret.
+- **Refresh tokens rotate.** Reusing an already-consumed refresh token revokes the whole token family and flags the connection for re-authorization.
+- **Clinicians use their own login.** Your platform never handles Everbility user credentials; sessions are bound to a specific clinician by verified email.
+
+## Start here
+
+<Steps>
+  <Step title="Get credentials">
+    Email [support@everbility.com](mailto:support@everbility.com) with your redirect URI to receive a `client_id` and `client_secret`.
+  </Step>
+  <Step title="Connect a practice">
+    Send a practice admin through the [consent flow](/developer-docs/partner/connect) and exchange the code for tokens.
+  </Step>
+  <Step title="Launch and retrieve">
+    Create a [launch session](/developer-docs/partner/launch-sessions), hand the clinician the `launch_url`, and poll for the finished document.
+  </Step>
+</Steps>

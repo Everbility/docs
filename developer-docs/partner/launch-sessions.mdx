@@ -1,0 +1,147 @@
+---
+title: "Launch sessions"
+description: "Create a report-writing session, hand off to the clinician, and retrieve the completed document."
+icon: "rocket"
+---
+
+A **launch session** is one report hand-off: your platform creates it, the assigned clinician completes the report in Everbility, and your platform pulls the finished document back. Sessions expire after **48 hours** if not completed.
+
+All endpoints on this page require a partner access token from the [connect flow](/developer-docs/partner/connect):
+
+```http
+Authorization: Bearer pat_...
+```
+
+## Create a session
+
+`POST /v1/partner/launch-sessions` with a required `Idempotency-Key` header:
+
+```bash
+curl -s https://api.everbility.com/v1/partner/launch-sessions \
+  -H "Authorization: Bearer pat_..." \
+  -H "Idempotency-Key: 018f6a1c-5b7e-7c4d-9f3a-2f6f1f6f9d42" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "external_client_id": "your-client-42",
+    "clinician_email": "jordan@examplepractice.com",
+    "client_first_name": "Alex",
+    "client_last_name": "Nguyen"
+  }'
+```
+
+```json Response
+{
+  "session_id": "psess_Zl9nB1qFhOQe2kQ4rW8xJ3Ty",
+  "status": "created",
+  "launch_url": "https://www.everbility.com/partner-sessions/psess_Zl9nB1qFhOQe2kQ4rW8xJ3Ty",
+  "expires_at": "2026-07-08T04:15:00Z"
+}
+```
+
+| Field | Required | Description |
+| --- | --- | --- |
+| `external_client_id` | Yes | Your platform's ID for the client (max 255 chars). Used to remember the client mapping across sessions. |
+| `clinician_email` | Yes | Must match the **verified** email of exactly one member of the connected practice. Matching is case-insensitive. |
+| `client_first_name` | No | Shown to the clinician when they map the client for the first time. |
+| `client_last_name` | No | Shown to the clinician when they map the client for the first time. |
+
+<Note>
+**Idempotency.** Retrying with the same `Idempotency-Key` and identical body returns the original session instead of creating a duplicate. Reusing a key with a *different* body fails with `409 Idempotency-Key conflict`. Use a fresh UUID per logical session.
+</Note>
+
+## Hand off to the clinician
+
+Open `launch_url` for the clinician — as a link, button, or embedded browser view from your platform. From there, Everbility takes over:
+
+<Steps>
+  <Step title="Sign in">
+    The clinician signs in with their own Everbility account. Only the clinician matched by `clinician_email` can open the session.
+  </Step>
+  <Step title="Map the client (first time only)">
+    If this `external_client_id` has not been seen before on this connection, the clinician links it to an Everbility client or creates a new one. The mapping is remembered, so later sessions for the same client skip this step.
+  </Step>
+  <Step title="Write and complete">
+    The clinician writes the report in the Everbility writer and marks the session complete, which attaches the finished document to the session.
+  </Step>
+</Steps>
+
+## Poll session status
+
+```bash
+curl -s https://api.everbility.com/v1/partner/launch-sessions/psess_Zl9nB1qFhOQe2kQ4rW8xJ3Ty \
+  -H "Authorization: Bearer pat_..."
+```
+
+```json Response
+{
+  "session_id": "psess_Zl9nB1qFhOQe2kQ4rW8xJ3Ty",
+  "status": "completed",
+  "created_at": "2026-07-06T04:15:00Z",
+  "opened_at": "2026-07-06T04:22:41Z",
+  "completed_at": "2026-07-06T05:03:12Z",
+  "expires_at": "2026-07-08T04:15:00Z",
+  "document_url": "/v1/partner/launch-sessions/psess_Zl9nB1qFhOQe2kQ4rW8xJ3Ty/document"
+}
+```
+
+```mermaid
+stateDiagram-v2
+    direction LR
+    [*] --> created : session created
+    created --> opened : clinician opens launch_url
+    opened --> completed : report attached
+    created --> expired : 48 h elapse
+    opened --> expired : 48 h elapse
+    completed --> [*]
+    expired --> [*]
+```
+
+| Status | Meaning |
+| --- | --- |
+| `created` | Session exists; the clinician has not opened it yet. |
+| `opened` | The clinician has opened the session in Everbility. |
+| `completed` | A document is attached — `document_url` is now populated. |
+| `expired` | The 48-hour window lapsed, or the connection was revoked, before completion. Terminal. |
+
+There are no webhooks yet; poll on a modest interval (for example every 30–60 seconds while you expect the clinician to be working) or when a user views the record in your platform.
+
+## Retrieve the completed document
+
+Once `status` is `completed`, fetch the rendered report:
+
+```bash
+curl -s "https://api.everbility.com/v1/partner/launch-sessions/psess_Zl9nB1qFhOQe2kQ4rW8xJ3Ty/document?format=html" \
+  -H "Authorization: Bearer pat_..."
+```
+
+```json Response
+{
+  "session_id": "psess_Zl9nB1qFhOQe2kQ4rW8xJ3Ty",
+  "title": "Functional capacity report",
+  "everbility_client_id": 864,
+  "format": "html",
+  "content": "<h1>Functional capacity report</h1>..."
+}
+```
+
+Use `format=markdown` (default) or `format=html`. The document stays available on the completed session, so you can re-fetch it after the 48-hour session window.
+
+## Errors
+
+| Status | Detail | Cause |
+| --- | --- | --- |
+| `400` | `Idempotency-Key is required` | Missing or blank `Idempotency-Key` header on create. |
+| `400` | `clinician_email_not_resolved` | The email does not match exactly one verified member of the connected practice. |
+| `401` | `Invalid bearer token` | Access token missing, expired (1 h), or revoked — refresh and retry. |
+| `401` | `Invalid partner connection` | The connection was revoked or needs re-authorization. |
+| `403` | `client_access_denied` | The mapped Everbility client is not accessible to the assigned clinician. |
+| `404` | `Session not found` | Unknown `session_id`, or it belongs to a different connection. |
+| `409` | `Idempotency-Key conflict` | Key reused with a different request body. |
+| `409` | `Session not completed` | Document requested before the session reached `completed`. |
+| `410` | `Session expired` | Document requested on an expired session. |
+
+Errors use the standard shape:
+
+```json
+{ "detail": "Session not completed" }
+```
