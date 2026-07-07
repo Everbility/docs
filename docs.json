@@ -32,6 +32,14 @@
               "developer-docs/uploads-and-transcription",
               "developer-docs/report-generation"
             ]
+          },
+          {
+            "group": "Partner integration",
+            "pages": [
+              "developer-docs/partner/index",
+              "developer-docs/partner/connect",
+              "developer-docs/partner/launch-sessions"
+            ]
           }
         ]
       },
@@ -77,6 +85,21 @@
             "group": "Report generation",
             "pages": [
               "POST /v1/public/clients/{client_id}/reports/generate"
+            ]
+          },
+          {
+            "group": "Partner OAuth",
+            "pages": [
+              "POST /v1/partner/oauth/token",
+              "POST /v1/partner/oauth/revoke"
+            ]
+          },
+          {
+            "group": "Partner launch sessions",
+            "pages": [
+              "POST /v1/partner/launch-sessions",
+              "GET /v1/partner/launch-sessions/{session_id}",
+              "GET /v1/partner/launch-sessions/{session_id}/document"
             ]
           }
         ]

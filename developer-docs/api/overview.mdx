@@ -9,15 +9,23 @@ description: "Reference overview for the Everbility Public API."
 https://api.everbility.com/v1/public
 ```
 
+Partner endpoints live under a separate prefix:
+
+```text
+https://api.everbility.com/v1/partner
+```
+
 ## Authentication
 
-All endpoints use bearer authentication with an Everbility API key:
+Public API endpoints (`/v1/public/...`) use bearer authentication with an Everbility API key:
 
 ```http
 Authorization: Bearer <api_key>
 ```
 
 Ask an organisation admin to enable API keys for your organisation. They can email [support@everbility.com](mailto:support@everbility.com) to enable API keys and/or create a test account.
+
+Partner endpoints (`/v1/partner/...`) use OAuth 2.0 access tokens issued by `POST /v1/partner/oauth/token` instead of API keys. See [Partner integration](/developer-docs/partner/index) for the connect flow.
 
 ## Response patterns
 

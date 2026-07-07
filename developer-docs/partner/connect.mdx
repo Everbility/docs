@@ -1,0 +1,170 @@
+---
+title: "Connect a practice"
+description: "Authorize your partner app for a practice with OAuth 2.0 authorization code flow and PKCE."
+icon: "plug"
+---
+
+Connecting is a one-time step per practice. A practice **organisation admin** approves your app on an Everbility consent page, and your server exchanges the resulting authorization code for an access and refresh token pair.
+
+The flow is standard [OAuth 2.0 authorization code](https://datatracker.ietf.org/doc/html/rfc6749#section-4.1) with [PKCE (RFC 7636)](https://datatracker.ietf.org/doc/html/rfc7636). PKCE is **mandatory**, and only the `S256` challenge method is accepted.
+
+## Prerequisites
+
+- Your `client_id` and `client_secret`, issued by Everbility during onboarding.
+- Your registered `redirect_uri`. Every request must use it exactly as registered — there is no wildcard or path matching.
+- The approving user must be an **organisation admin** in Everbility. Other users see the consent page but cannot approve.
+
+<Warning>
+Keep the `client_secret` on your server only. It is required at the token endpoint, so the connect flow cannot be completed from a browser or mobile app alone.
+</Warning>
+
+<Steps>
+  <Step title="Generate the PKCE pair and state">
+    For every connection attempt, generate a fresh `state` and a fresh `code_verifier` (43–128 characters from `A–Z a–z 0–9 - . _ ~`), then derive the challenge:
+
+    ```text
+    code_challenge = base64url( SHA-256( code_verifier ) )   // no "=" padding, 43 chars
+    ```
+
+    <CodeGroup>
+    ```typescript Node.js
+    import { randomBytes, createHash } from "node:crypto";
+
+    const state = randomBytes(16).toString("base64url");
+    const codeVerifier = randomBytes(32).toString("base64url"); // 43 chars
+    const codeChallenge = createHash("sha256")
+      .update(codeVerifier)
+      .digest("base64url");
+    ```
+
+    ```python Python
+    import base64, hashlib, secrets
+
+    state = secrets.token_urlsafe(16)
+    code_verifier = secrets.token_urlsafe(32)  # 43 chars
+    code_challenge = (
+        base64.urlsafe_b64encode(hashlib.sha256(code_verifier.encode()).digest())
+        .rstrip(b"=")
+        .decode()
+    )
+    ```
+    </CodeGroup>
+
+    Store `state` and `code_verifier` server-side against the pending attempt — you need both when the callback arrives.
+  </Step>
+
+  <Step title="Send the admin to the consent page">
+    Redirect the practice admin's browser to:
+
+    ```text
+    https://www.everbility.com/integrations/partner-connect/authorize
+      ?client_id=<your client_id>
+      &redirect_uri=<your registered redirect_uri, URL-encoded>
+      &state=<your state>
+      &code_challenge=<challenge>
+      &code_challenge_method=S256
+    ```
+
+    The admin signs in to Everbility if needed, reviews what your app will be able to do, and approves. Links missing valid PKCE parameters show an error card and cannot be approved.
+  </Step>
+
+  <Step title="Handle the callback">
+    On approval, the browser is redirected to your `redirect_uri`:
+
+    ```text
+    https://partner.example.com/callback?code=pcode_xxxxxxxx&state=<your state>
+    ```
+
+    If the admin cancels, you receive `?error=access_denied&state=<your state>` instead.
+
+    Verify that `state` matches a pending attempt before continuing, then look up its `code_verifier`. The code is single-use and expires after **5 minutes**.
+  </Step>
+
+  <Step title="Exchange the code for tokens">
+    Call the token endpoint from your server. It accepts form-encoded or JSON bodies.
+
+    ```bash
+    curl -s https://api.everbility.com/v1/partner/oauth/token \
+      -d grant_type=authorization_code \
+      -d client_id=<client_id> \
+      -d client_secret=<client_secret> \
+      -d code=<code from callback> \
+      -d redirect_uri=<registered redirect_uri> \
+      -d code_verifier=<verifier for this attempt>
+    ```
+
+    ```json Response
+    {
+      "access_token": "pat_...",
+      "refresh_token": "prt_...",
+      "token_type": "Bearer",
+      "expires_in": 3600
+    }
+    ```
+
+    Store both tokens securely, keyed by practice. Exchanging a code revokes any tokens previously issued for the same connection.
+  </Step>
+
+  <Step title="Call the Partner API">
+    Send the access token as a bearer token on every partner endpoint:
+
+    ```http
+    Authorization: Bearer pat_...
+    ```
+  </Step>
+</Steps>
+
+## Refresh tokens and rotation
+
+Access tokens last **1 hour**; refresh tokens last **90 days**. Refresh before or after expiry with:
+
+```bash
+curl -s https://api.everbility.com/v1/partner/oauth/token \
+  -d grant_type=refresh_token \
+  -d client_id=<client_id> \
+  -d client_secret=<client_secret> \
+  -d refresh_token=<current refresh_token>
+```
+
+The response has the same shape as the code exchange — a **new** access and refresh token pair. Refresh tokens rotate:
+
+- Each refresh token is **single use**. Always persist the new pair from the response before discarding the old one.
+- The previous access token is revoked when you refresh.
+- Presenting an already-used refresh token is treated as theft: **every token for the connection is revoked**, open launch sessions are expired, and the connection status becomes `reauthorization_required`. The response is `401 Refresh token reuse detected`.
+- After 90 days without a successful refresh, the refresh token expires with `401 Refresh token expired`, and the connection likewise requires re-authorization.
+
+<Tip>
+As long as you refresh at least once every 90 days, the connection stays alive indefinitely without bothering the practice admin.
+</Tip>
+
+## Re-authorization
+
+When a connection reaches `reauthorization_required` (refresh expiry or token reuse), or a practice admin revokes it from Everbility, all API calls return `401`. To recover, send a practice admin through the consent flow again — approving reactivates the same connection, and existing client mappings are preserved.
+
+## Revoking a connection
+
+Either side can end a connection:
+
+- **Your platform**: `POST /v1/partner/oauth/revoke` with `client_id`, `client_secret`, and any `token` from the connection (access or refresh). This revokes the entire connection, not just the presented token, and always returns `{"revoked": true}`.
+- **The practice**: an organisation admin disconnects your app from within Everbility.
+
+In both cases all tokens are revoked and unfinished launch sessions expire.
+
+## Errors
+
+| Status | Detail | Cause |
+| --- | --- | --- |
+| `400` | `Invalid redirect_uri` | `redirect_uri` does not exactly match the registered value. |
+| `400` | `Invalid authorization code` | Code is unknown, expired (5 min), already used, or was issued for a different `redirect_uri`. |
+| `400` | `Invalid code_verifier` | Verifier is malformed or does not match the `code_challenge` from the consent request. |
+| `400` | `Unsupported grant_type` | `grant_type` is not `authorization_code` or `refresh_token`. |
+| `401` | `Invalid OAuth client` | Unknown `client_id` or wrong `client_secret`. |
+| `401` | `Invalid refresh token` | Refresh token unknown, revoked, or belongs to another app. |
+| `401` | `Refresh token reuse detected` | An already-consumed refresh token was presented; the connection now requires re-authorization. |
+| `401` | `Refresh token expired` | The 90-day window lapsed; the connection now requires re-authorization. |
+
+Errors use the standard shape:
+
+```json
+{ "detail": "Invalid authorization code" }
+```
