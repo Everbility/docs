@@ -33,11 +33,10 @@ sequenceDiagram
     P->>E: POST /v1/partner/launch-sessions (clinician + client details)
     E-->>P: session_id + launch_url
     P->>B: Clinician opens launch_url
-    B->>E: Clinician signs in and writes the report in Everbility
+    B->>E: Clinician signs in and selects or creates a report
 
     Note over P,E: Retrieve
-    P->>E: GET /v1/partner/launch-sessions/{session_id}
-    E-->>P: status: completed + document_url
+    E-->>P: Signed launch_session.completed webhook
     P->>E: GET /v1/partner/launch-sessions/{session_id}/document
     E-->>P: document title + content (Markdown or HTML)
 ```
@@ -52,7 +51,13 @@ sequenceDiagram
     A single report-writing hand-off. You create it with a clinician email and your client ID, then send the clinician to the `launch_url`.
   </Card>
   <Card title="Document retrieval" icon="file-lines" href="/developer-docs/partner/launch-sessions#retrieve-the-completed-document">
-    Poll the session until it completes, then pull the rendered report as Markdown or HTML into your platform.
+    Receive a completion webhook, then pull the rendered report as Markdown or HTML into your platform.
+  </Card>
+  <Card title="Webhooks" icon="webhook" href="/developer-docs/partner/webhooks">
+    Receive signed session opened, completed, and expired events.
+  </Card>
+  <Card title="Branding" icon="palette" href="/developer-docs/partner/branding">
+    Download approved assets and add an Open in Everbility button.
   </Card>
 </CardGroup>
 
@@ -75,7 +80,7 @@ Your platform and Everbility each have their own client records. The first time 
 | Authorization code | 5 minutes | Single use. A new approval invalidates any outstanding codes. |
 | Access token | 1 hour | Opaque bearer token for all partner endpoints. |
 | Refresh token | 90 days | Single use — each refresh returns a new pair (rotation). |
-| Launch session | 48 hours | Expires if the clinician does not complete the report in time. |
+| Launch session | 48 hours | Fixed from creation; activity does not extend it. Expiry does not delete saved reports. |
 
 ## Security model
 
@@ -88,12 +93,12 @@ Your platform and Everbility each have their own client records. The first time 
 
 <Steps>
   <Step title="Get credentials">
-    Email [support@everbility.com](mailto:support@everbility.com) with your redirect URI to receive a `client_id` and `client_secret`.
+    Email [support@everbility.com](mailto:support@everbility.com) with your redirect URI and optional webhook URL to receive a `client_id` and `client_secret`.
   </Step>
   <Step title="Connect a practice">
     Send a practice admin through the [consent flow](/developer-docs/partner/connect) and exchange the code for tokens.
   </Step>
   <Step title="Launch and retrieve">
-    Create a [launch session](/developer-docs/partner/launch-sessions), hand the clinician the `launch_url`, and poll for the finished document.
+    Create a [launch session](/developer-docs/partner/launch-sessions), hand the clinician the `launch_url`, and retrieve the document after the completion webhook.
   </Step>
 </Steps>

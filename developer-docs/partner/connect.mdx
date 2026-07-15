@@ -12,11 +12,16 @@ The flow is standard [OAuth 2.0 authorization code](https://datatracker.ietf.org
 
 - Your `client_id` and `client_secret`, issued by Everbility during onboarding.
 - Your registered `redirect_uri`. Every request must use it exactly as registered — there is no wildcard or path matching.
+- An HTTPS webhook endpoint if you want launch-session events. Everbility registers this during onboarding.
 - The approving user must be an **organisation admin** in Everbility. Other users see the consent page but cannot approve.
 
 <Warning>
 Keep the `client_secret` on your server only. It is required at the token endpoint, so the connect flow cannot be completed from a browser or mobile app alone.
 </Warning>
+
+<Note>
+Redirect URIs are an OAuth security boundary and cannot be changed dynamically. Use a separately registered partner app for each environment so authorization codes, credentials, tokens, and connections remain isolated and auditable.
+</Note>
 
 <Steps>
   <Step title="Generate the PKCE pair and state">

@@ -4,7 +4,9 @@ description: "Create a report-writing session, hand off to the clinician, and re
 icon: "rocket"
 ---
 
-A **launch session** is one report hand-off: your platform creates it, the assigned clinician completes the report in Everbility, and your platform pulls the finished document back. Sessions expire after **48 hours** if not completed.
+A **launch session** is one report hand-off: your platform creates it, the assigned clinician chooses a report in Everbility, and your platform pulls the selected document back. Sessions expire **48 hours after creation** if not completed.
+
+The expiry is fixed. Opening the session, returning to it, or checking its status does not extend the deadline. Closing the Everbility tab has no effect, and expiry does not delete reports saved in Everbility.
 
 All endpoints on this page require a partner access token from the [connect flow](/developer-docs/partner/connect):
 
@@ -55,13 +57,13 @@ Open `launch_url` for the clinician — as a link, button, or embedded browser v
 
 <Steps>
   <Step title="Sign in">
-    The clinician signs in with their own Everbility account. Only the clinician matched by `clinician_email` can open the session.
+    The clinician signs in with their own Everbility account. Only the clinician matched by `clinician_email` can open the session. The launch link does not create a restricted Everbility account: the clinician retains their ordinary Everbility permissions.
   </Step>
   <Step title="Map the client (first time only)">
     If this `external_client_id` has not been seen before on this connection, the clinician links it to an Everbility client or creates a new one. The mapping is remembered, so later sessions for the same client skip this step.
   </Step>
-  <Step title="Write and complete">
-    The clinician writes the report in the Everbility writer and marks the session complete, which attaches the finished document to the session.
+  <Step title="Choose and complete">
+    The clinician creates a new report or selects an existing report for the mapped client, then chooses **Send to [partner]**. A report belonging to another client cannot be sent through the session.
   </Step>
 </Steps>
 
@@ -101,9 +103,9 @@ stateDiagram-v2
 | `created` | Session exists; the clinician has not opened it yet. |
 | `opened` | The clinician has opened the session in Everbility. |
 | `completed` | A document is attached — `document_url` is now populated. |
-| `expired` | The 48-hour window lapsed, or the connection was revoked, before completion. Terminal. |
+| `expired` | The fixed 48-hour window lapsed, or the connection was revoked, before completion. Terminal; saved reports are not deleted. |
 
-There are no webhooks yet; poll on a modest interval (for example every 30–60 seconds while you expect the clinician to be working) or when a user views the record in your platform.
+Use [webhooks](/developer-docs/partner/webhooks) for normal status updates. Polling remains available as a recovery mechanism or when a user views the record in your platform.
 
 ## Retrieve the completed document
 
@@ -124,7 +126,7 @@ curl -s "https://api.everbility.com/v1/partner/launch-sessions/psess_Zl9nB1qFhOQ
 }
 ```
 
-Use `format=markdown` (default) or `format=html`. The document stays available on the completed session, so you can re-fetch it after the 48-hour session window.
+Use `format=markdown` (default) or `format=html`. HTML retrieval removes Everbility's default fixed `75px` table-cell widths so tables can use the width available in your application; other explicit widths are preserved. The document stays available on the completed session, so you can re-fetch it after the 48-hour session window.
 
 ## Errors
 

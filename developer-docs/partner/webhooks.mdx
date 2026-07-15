@@ -1,0 +1,73 @@
+---
+title: "Webhooks"
+description: "Receive signed notifications when partner launch sessions are opened, completed, or expired."
+icon: "webhook"
+---
+
+Everbility can send signed HTTPS webhooks when a launch session changes state. Provide your webhook URL during onboarding; it is registered by Everbility and cannot be changed through an API request.
+
+Polling remains supported as a fallback, but webhooks are the preferred way to react to session activity.
+
+## Events
+
+| Event | Sent when |
+| --- | --- |
+| `launch_session.opened` | The assigned clinician first opens the launch session. |
+| `launch_session.completed` | The clinician sends a report to your platform. Fetch it from `data.document_url`. |
+| `launch_session.expired` | An unfinished session passes its fixed 48-hour deadline or its connection is revoked. |
+
+Expiry is checked every minute, so an expiry event is normally queued within one minute of `expires_at`.
+
+## Payload
+
+```json
+{
+  "id": "pwevt_eYQdV8wYz4cZQ3JQ7r2x8w",
+  "type": "launch_session.completed",
+  "created_at": "2026-07-15T05:03:12Z",
+  "data": {
+    "session_id": "psess_Zl9nB1qFhOQe2kQ4rW8xJ3Ty",
+    "status": "completed",
+    "external_client_id": "your-client-42",
+    "clinician_email": "jordan@examplepractice.com",
+    "opened_at": "2026-07-15T04:22:41Z",
+    "completed_at": "2026-07-15T05:03:12Z",
+    "expires_at": "2026-07-17T04:15:00Z",
+    "document_url": "/v1/partner/launch-sessions/psess_Zl9nB1qFhOQe2kQ4rW8xJ3Ty/document"
+  }
+}
+```
+
+`document_url` is populated only for `launch_session.completed`.
+
+## Verify the signature
+
+Every request includes:
+
+```http
+Everbility-Webhook-Id: pwevt_eYQdV8wYz4cZQ3JQ7r2x8w
+Everbility-Webhook-Timestamp: 1784091792
+Everbility-Webhook-Signature: v1=<hex digest>
+```
+
+The signing key is derived from your OAuth `client_secret`, without transmitting or storing an additional shared secret:
+
+```text
+client_secret_digest = SHA-256(client_secret)
+signing_key = HMAC-SHA256(client_secret_digest, "everbility-partner-webhook-v1")
+expected_signature = HMAC-SHA256(signing_key, timestamp + "." + raw_request_body)
+```
+
+Compare the hexadecimal digest from `v1=` using a constant-time comparison. Verify the signature against the exact raw request body before parsing JSON, and reject timestamps older than five minutes to limit replay attacks.
+
+<Warning>
+Keep the OAuth `client_secret` and the derived signing key on your server. Never expose either value in browser or mobile application code.
+</Warning>
+
+## Delivery and retries
+
+- Return any `2xx` status after you have durably accepted the event.
+- Deduplicate using the top-level `id` or the `Everbility-Webhook-Id` header. Retries retain the same ID and payload.
+- Do not depend on delivery order; a retry can arrive after a later event.
+- Failed deliveries are retried after approximately 1 minute, 5 minutes, 30 minutes, 2 hours, 8 hours, and 24 hours.
+- Continue to support status polling as a recovery path in case your endpoint is unavailable beyond the retry window.
