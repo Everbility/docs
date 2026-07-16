@@ -1,0 +1,220 @@
+---
+title: "Webhooks"
+description: "Receive and verify signed notifications when partner launch sessions change state."
+icon: "webhook"
+---
+
+Everbility sends signed HTTPS webhooks when a launch session changes state. Webhooks tell you **what changed**; you then use the Partner API to read the current session or retrieve its document.
+
+Polling remains supported as a recovery path, but webhooks are the preferred way to react to session activity.
+
+## Set up your endpoint
+
+During onboarding, give Everbility an HTTPS endpoint such as:
+
+```text
+https://partner.example.com/webhooks/everbility
+```
+
+Everbility also gives you a dedicated `webhook_secret`. This secret is separate from your OAuth `client_secret` and is used only to verify webhook signatures.
+
+Your endpoint must:
+
+- use HTTPS;
+- accept `POST` requests with an `application/json` body;
+- not rely on credentials embedded in the URL;
+- return a `2xx` response within 10 seconds after durably accepting the event.
+
+<Warning>
+Store the `webhook_secret` in your server-side secret manager. Never expose it in browser or mobile application code. If it is exposed, contact [support@everbility.com](mailto:support@everbility.com) to rotate it.
+</Warning>
+
+## Events
+
+| Event | Sent when |
+| --- | --- |
+| `launch_session.opened` | The assigned clinician first opens the launch session. |
+| `launch_session.completed` | The clinician sends a report to your platform. Fetch it from `data.document_url`. |
+| `launch_session.expired` | An unfinished session passes its fixed 48-hour deadline or its connection is revoked. |
+
+Expiry is checked every minute, so an expiry event is normally queued within one minute of `expires_at`.
+
+## Payload
+
+```json
+{
+  "id": "pwevt_eYQdV8wYz4cZQ3JQ7r2x8w",
+  "type": "launch_session.completed",
+  "created_at": "2026-07-15T05:03:12Z",
+  "data": {
+    "session_id": "psess_Zl9nB1qFhOQe2kQ4rW8xJ3Ty",
+    "status": "completed",
+    "external_client_id": "your-client-42",
+    "clinician_email": "jordan@examplepractice.com",
+    "opened_at": "2026-07-15T04:22:41Z",
+    "completed_at": "2026-07-15T05:03:12Z",
+    "expires_at": "2026-07-17T04:15:00Z",
+    "document_url": "/v1/partner/launch-sessions/psess_Zl9nB1qFhOQe2kQ4rW8xJ3Ty/document"
+  }
+}
+```
+
+| Field | Meaning |
+| --- | --- |
+| `id` | Stable event ID. It stays the same across retries. Use it for deduplication. |
+| `type` | Event type from the table above. |
+| `created_at` | When Everbility created the event, in UTC. This is not the session creation time. |
+| `data.session_id` | Launch session that changed state. |
+| `data.status` | New session state: `opened`, `completed`, or `expired`. |
+| `data.external_client_id` | Your client identifier from the create-session request. |
+| `data.clinician_email` | Assigned clinician's normalized email address. Treat it as personal information. |
+| `data.opened_at` | When the clinician first opened the session, or `null` if it was never opened. |
+| `data.completed_at` | Completion time for a completed session; otherwise `null`. |
+| `data.expires_at` | Fixed session deadline in UTC. |
+| `data.document_url` | Present only for `launch_session.completed`; otherwise `null`. |
+
+## Request headers
+
+Every delivery includes:
+
+```http
+Content-Type: application/json
+User-Agent: Everbility-Partner-Webhooks/1.0
+Everbility-Webhook-Id: pwevt_eYQdV8wYz4cZQ3JQ7r2x8w
+Everbility-Webhook-Timestamp: 1784091792
+Everbility-Webhook-Signature: v1=<64-character hexadecimal digest>
+```
+
+`Everbility-Webhook-Timestamp` is the Unix timestamp for that delivery attempt. A retry keeps the same event ID and JSON body but receives a new timestamp and signature.
+
+## Verify the signature
+
+Build the signed message from the timestamp, a literal period, and the **exact raw request bytes**:
+
+```text
+signed_message = timestamp + "." + raw_request_body
+expected_signature = HMAC-SHA256(webhook_secret, signed_message).hexdigest()
+```
+
+Compare the expected digest with the value after `v1=` using a constant-time comparison.
+
+<Warning>
+Verify the signature before parsing JSON. Re-serializing parsed JSON can change whitespace or key order and will produce a different signature.
+</Warning>
+
+<CodeGroup>
+```typescript Node.js
+import { createHmac, timingSafeEqual } from "node:crypto";
+
+export function verifyEverbilityWebhook(
+  rawBody: Buffer,
+  headers: Record<string, string | undefined>,
+  webhookSecret: string,
+  now = Math.floor(Date.now() / 1000),
+): boolean {
+  const timestamp = headers["everbility-webhook-timestamp"];
+  const signatureHeader = headers["everbility-webhook-signature"];
+
+  if (!timestamp || !/^\d+$/.test(timestamp)) return false;
+  if (Math.abs(now - Number(timestamp)) > 300) return false;
+
+  const signatureMatch = /^v1=([0-9a-f]{64})$/.exec(signatureHeader ?? "");
+  if (!signatureMatch) return false;
+
+  const expected = createHmac("sha256", webhookSecret)
+    .update(`${timestamp}.`, "ascii")
+    .update(rawBody)
+    .digest();
+  const supplied = Buffer.from(signatureMatch[1], "hex");
+
+  return timingSafeEqual(expected, supplied);
+}
+```
+
+```python Python
+import hashlib
+import hmac
+import re
+import time
+from collections.abc import Mapping
+
+
+def verify_everbility_webhook(
+    raw_body: bytes,
+    headers: Mapping[str, str],
+    webhook_secret: str,
+    now: int | None = None,
+) -> bool:
+    timestamp = headers.get("Everbility-Webhook-Timestamp", "")
+    signature_header = headers.get("Everbility-Webhook-Signature", "")
+
+    if not timestamp.isdigit():
+        return False
+    current_time = int(time.time()) if now is None else now
+    if abs(current_time - int(timestamp)) > 300:
+        return False
+
+    match = re.fullmatch(r"v1=([0-9a-f]{64})", signature_header)
+    if match is None:
+        return False
+
+    expected = hmac.new(
+        webhook_secret.encode("utf-8"),
+        timestamp.encode("ascii") + b"." + raw_body,
+        hashlib.sha256,
+    ).hexdigest()
+    return hmac.compare_digest(expected, match.group(1))
+```
+</CodeGroup>
+
+Configure your framework to preserve the raw body. For example, use `express.raw({ type: "application/json" })` on the webhook route before `express.json()` in Express, or call `await request.body()` before JSON parsing in FastAPI.
+
+## Handle an event safely
+
+<Steps>
+  <Step title="Read the raw request">
+    Capture the body as bytes and read the timestamp, signature, and event ID headers.
+  </Step>
+  <Step title="Verify the request">
+    Reject malformed signatures and timestamps more than five minutes away from your server clock. Compare the signature in constant time.
+  </Step>
+  <Step title="Deduplicate and persist">
+    Use `Everbility-Webhook-Id` or the payload's top-level `id` as a unique key. Persist the event or enqueue your work before acknowledging it.
+  </Step>
+  <Step title="Return a success response">
+    Return `200`, `202`, or `204` promptly. Perform slower document retrieval and processing asynchronously.
+  </Step>
+  <Step title="Read the current API state">
+    Treat the webhook as a notification. Poll the session if needed, and use a current OAuth access token to retrieve a completed document.
+  </Step>
+</Steps>
+
+## Retrieve a completed document
+
+`data.document_url` is relative to the API host. Resolve it against `https://api.everbility.com` and authenticate with your OAuth access token:
+
+```bash
+curl -s "https://api.everbility.com/v1/partner/launch-sessions/psess_Zl9nB1qFhOQe2kQ4rW8xJ3Ty/document?format=html" \
+  -H "Authorization: Bearer pat_..."
+```
+
+The webhook secret cannot authorize this request. Refresh your OAuth access token first if it has expired.
+
+## Delivery and retries
+
+- Any `2xx` response marks the event delivered.
+- Network errors, a 10-second timeout, and every non-`2xx` response are failures. Redirects are not followed, so a `3xx` response is retried.
+- Everbility makes up to **seven total attempts**: the initial attempt, then retries after approximately 1 minute, 5 minutes, 30 minutes, 2 hours, 8 hours, and 24 hours.
+- After the seventh failed attempt, the delivery becomes terminally failed. Use session-status polling as your recovery path.
+- Retries keep the same event ID and raw JSON body. Each attempt receives a new timestamp and signature.
+- Do not depend on delivery order. A retry can arrive after a later event.
+
+## Go-live checklist
+
+- Your endpoint is HTTPS and does not redirect.
+- You preserve the raw request body before parsing JSON.
+- You verify the dedicated webhook secret, timestamp, and signature.
+- You deduplicate by event ID and return `2xx` only after durable acceptance.
+- Your handler responds in less than 10 seconds and processes slow work asynchronously.
+- You retrieve documents with OAuth, not the webhook secret.
+- You retain status polling for recovery and monitor repeated delivery failures.

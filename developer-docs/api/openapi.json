@@ -3,7 +3,7 @@
   "info": {
     "title": "Everbility Public API",
     "version": "1.0.0",
-    "description": "Pull reports from Everbility, upload notes and files, poll asynchronous jobs, and generate reports from saved templates. Partner endpoints let approved platforms connect practices with OAuth 2.0, launch report-writing sessions, and retrieve completed documents."
+    "description": "Pull reports from Everbility, upload notes and files, poll asynchronous jobs, and generate reports from saved templates. Partner endpoints let approved platforms connect practices with OAuth 2.0, launch report-writing sessions, receive signed lifecycle webhooks, and retrieve completed documents."
   },
   "paths": {
     "/v1/public/me": {
@@ -1005,6 +1005,68 @@
       }
     }
   },
+  "webhooks": {
+    "partnerLaunchSessionEvent": {
+      "post": {
+        "tags": [
+          "partner-webhooks"
+        ],
+        "summary": "Partner launch session event",
+        "description": "Signed notification sent to the HTTPS webhook URL registered during onboarding. Verify the HMAC-SHA256 signature against the exact raw request body using the dedicated webhook secret. Return any 2xx response within 10 seconds after durable acceptance.",
+        "parameters": [
+          {
+            "name": "Everbility-Webhook-Id",
+            "in": "header",
+            "required": true,
+            "description": "Stable event ID. Use it to deduplicate retries.",
+            "schema": {
+              "type": "string",
+              "example": "pwevt_eYQdV8wYz4cZQ3JQ7r2x8w"
+            }
+          },
+          {
+            "name": "Everbility-Webhook-Timestamp",
+            "in": "header",
+            "required": true,
+            "description": "Unix timestamp for this delivery attempt.",
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9]+$",
+              "example": "1784091792"
+            }
+          },
+          {
+            "name": "Everbility-Webhook-Signature",
+            "in": "header",
+            "required": true,
+            "description": "Versioned HMAC-SHA256 signature: v1=<64-character hexadecimal digest>.",
+            "schema": {
+              "type": "string",
+              "pattern": "^v1=[0-9a-f]{64}$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PartnerWebhookEvent"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Event accepted. Any 2xx status is treated as success."
+          },
+          "default": {
+            "description": "A non-2xx response causes a retry. Redirects are not followed."
+          }
+        }
+      }
+    }
+  },
   "components": {
     "schemas": {
       "Body_upload_large_audio_for_transcription_v1_external_clients__client_id__transcriptions_upload_large_post": {
@@ -1825,6 +1887,124 @@
           "completed_at": "2026-07-06T05:03:12Z",
           "expires_at": "2026-07-08T04:15:00Z",
           "document_url": "/v1/partner/launch-sessions/psess_Zl9nB1qFhOQe2kQ4rW8xJ3Ty/document"
+        }
+      },
+      "PartnerWebhookEvent": {
+        "type": "object",
+        "title": "PartnerWebhookEvent",
+        "description": "Signed launch-session lifecycle event. The event ID and serialized payload remain stable across retries; the delivery timestamp and signature change for each attempt.",
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Event Id",
+            "description": "Stable event ID used for deduplication."
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "launch_session.opened",
+              "launch_session.completed",
+              "launch_session.expired"
+            ],
+            "title": "Event Type"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Event Created At"
+          },
+          "data": {
+            "type": "object",
+            "title": "Launch Session Event Data",
+            "properties": {
+              "session_id": {
+                "type": "string"
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "opened",
+                  "completed",
+                  "expired"
+                ]
+              },
+              "external_client_id": {
+                "type": "string"
+              },
+              "clinician_email": {
+                "type": "string",
+                "description": "Assigned clinician's normalized email address."
+              },
+              "opened_at": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "completed_at": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "expires_at": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "document_url": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "description": "API-relative document URL, populated only for launch_session.completed."
+              }
+            },
+            "required": [
+              "session_id",
+              "status",
+              "external_client_id",
+              "clinician_email",
+              "opened_at",
+              "completed_at",
+              "expires_at",
+              "document_url"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "created_at",
+          "data"
+        ],
+        "example": {
+          "id": "pwevt_eYQdV8wYz4cZQ3JQ7r2x8w",
+          "type": "launch_session.completed",
+          "created_at": "2026-07-15T05:03:12Z",
+          "data": {
+            "session_id": "psess_Zl9nB1qFhOQe2kQ4rW8xJ3Ty",
+            "status": "completed",
+            "external_client_id": "your-client-42",
+            "clinician_email": "jordan@examplepractice.com",
+            "opened_at": "2026-07-15T04:22:41Z",
+            "completed_at": "2026-07-15T05:03:12Z",
+            "expires_at": "2026-07-17T04:15:00Z",
+            "document_url": "/v1/partner/launch-sessions/psess_Zl9nB1qFhOQe2kQ4rW8xJ3Ty/document"
+          }
         }
       },
       "PartnerDocumentDetail": {

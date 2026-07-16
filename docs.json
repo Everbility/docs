@@ -38,7 +38,9 @@
             "pages": [
               "developer-docs/partner/index",
               "developer-docs/partner/connect",
-              "developer-docs/partner/launch-sessions"
+              "developer-docs/partner/launch-sessions",
+              "developer-docs/partner/webhooks",
+              "developer-docs/partner/branding"
             ]
           }
         ]
