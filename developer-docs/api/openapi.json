@@ -907,7 +907,7 @@
         ],
         "summary": "Get Completed Session Document",
         "operationId": "get_partner_launch_session_document_v1_partner_launch_sessions__session_id__document_get",
-        "description": "Retrieve the rendered report attached to a completed launch session, as Markdown (default) or HTML. HTML output removes Everbility's default fixed 75px table-cell widths while preserving other explicit widths. The document remains available on the completed session after the 48-hour session window.",
+        "description": "Retrieve the rendered report attached to a completed launch session, as Markdown (default) or HTML. The document remains available on the completed session after the 48-hour session window.",
         "parameters": [
           {
             "name": "session_id",

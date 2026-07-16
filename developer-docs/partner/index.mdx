@@ -86,7 +86,7 @@ Your platform and Everbility each have their own client records. The first time 
 
 - **PKCE is mandatory.** Every authorization uses `code_challenge_method=S256`, in addition to your `client_secret`.
 - **Tokens are opaque and hashed at rest.** Everbility stores only SHA-256 hashes of codes, tokens, and your client secret.
-- **Webhook signing uses a separate secret.** It is not derived from your OAuth `client_secret`. Everbility stores the webhook secret encrypted and decrypts it only when signing a delivery.
+- **Webhook signing uses a separate secret.** Everbility stores the webhook secret encrypted and decrypts it only when signing a delivery.
 - **Refresh tokens rotate.** Reusing an already-consumed refresh token revokes the whole token family and flags the connection for re-authorization.
 - **Clinicians use their own login.** Your platform never handles Everbility user credentials; sessions are bound to a specific clinician by verified email.
 

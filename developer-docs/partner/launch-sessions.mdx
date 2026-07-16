@@ -126,7 +126,7 @@ curl -s "https://api.everbility.com/v1/partner/launch-sessions/psess_Zl9nB1qFhOQ
 }
 ```
 
-Use `format=markdown` (default) or `format=html`. HTML retrieval removes Everbility's default fixed `75px` table-cell widths so tables can use the width available in your application; other explicit widths are preserved. The document stays available on the completed session, so you can re-fetch it after the 48-hour session window.
+Use `format=markdown` (default) or `format=html`. The document stays available on the completed session, so you can re-fetch it after the 48-hour session window.
 
 <Note>
 `document_url` is relative to `https://api.everbility.com`. Fetch it with a current OAuth access token. The webhook secret verifies notifications only; it does not authorize API requests.
