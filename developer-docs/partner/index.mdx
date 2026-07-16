@@ -9,7 +9,7 @@ The Partner API lets practice management systems and other platforms embed Everb
 Unlike the [Public API](/developer-docs/index), which uses per-user API keys, the Partner API is built for third-party platforms: a practice admin connects your app once with OAuth 2.0, and your server acts on behalf of that whole practice.
 
 <Info>
-Partner apps are provisioned manually. Email [support@everbility.com](mailto:support@everbility.com) to register as a partner and receive your `client_id` and `client_secret`.
+Partner apps are provisioned manually. Email [support@everbility.com](mailto:support@everbility.com) to register as a partner and receive your OAuth `client_id` and `client_secret`. If you enable webhooks, Everbility also gives you a separate `webhook_secret`.
 </Info>
 
 ## How it works
@@ -86,6 +86,7 @@ Your platform and Everbility each have their own client records. The first time 
 
 - **PKCE is mandatory.** Every authorization uses `code_challenge_method=S256`, in addition to your `client_secret`.
 - **Tokens are opaque and hashed at rest.** Everbility stores only SHA-256 hashes of codes, tokens, and your client secret.
+- **Webhook signing uses a separate secret.** It is not derived from your OAuth `client_secret`. Everbility stores the webhook secret encrypted and decrypts it only when signing a delivery.
 - **Refresh tokens rotate.** Reusing an already-consumed refresh token revokes the whole token family and flags the connection for re-authorization.
 - **Clinicians use their own login.** Your platform never handles Everbility user credentials; sessions are bound to a specific clinician by verified email.
 
@@ -93,7 +94,7 @@ Your platform and Everbility each have their own client records. The first time 
 
 <Steps>
   <Step title="Get credentials">
-    Email [support@everbility.com](mailto:support@everbility.com) with your redirect URI and optional webhook URL to receive a `client_id` and `client_secret`.
+    Email [support@everbility.com](mailto:support@everbility.com) with your redirect URI and optional webhook URL. Everbility gives you an OAuth `client_id` and `client_secret`, plus a separate `webhook_secret` when webhooks are enabled.
   </Step>
   <Step title="Connect a practice">
     Send a practice admin through the [consent flow](/developer-docs/partner/connect) and exchange the code for tokens.
@@ -102,3 +103,12 @@ Your platform and Everbility each have their own client records. The first time 
     Create a [launch session](/developer-docs/partner/launch-sessions), hand the clinician the `launch_url`, and retrieve the document after the completion webhook.
   </Step>
 </Steps>
+
+## Before you go live
+
+- Register a separate partner app, redirect URI, webhook URL, and credential set for each environment.
+- Store OAuth tokens, the OAuth client secret, and the webhook secret in a server-side secret manager.
+- Persist each rotated refresh-token pair atomically so you never reuse a consumed refresh token.
+- Generate a unique `Idempotency-Key` for each logical launch session and reuse it only when retrying that request.
+- Verify webhook signatures against the raw request bytes, reject stale timestamps, and deduplicate by event ID.
+- Keep session-status polling as a recovery path if webhook delivery reaches its final retry.
